@@ -259,6 +259,11 @@ int mvr::Renderer::run()
         return EXIT_FAILURE;
     }
 
+    // TODO: delete this
+    GLint dummy = 0;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &dummy);
+    std::cout << "Max texture size: " << dummy << std::endl;
+
     // ------------------------------------------------------------------------
     // local variables
     // ------------------------------------------------------------------------
