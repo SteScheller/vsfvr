@@ -113,8 +113,11 @@ namespace mvr
         //---------------------------------------------------------------------
         int initializeVsfvr();
         int calcVisibility();
+
         std::array<unsigned int, 2> m_visibilityDimensions;
         Shader m_shaderVisibility;
+        util::geometry::Quad m_visibilityWindowQuad;
+        glm::mat4 m_visibilityQuadProjMx;
 
         //---------------------------------------------------------------------
         // class-wide constants and default values

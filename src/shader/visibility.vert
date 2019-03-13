@@ -1,16 +1,10 @@
 #version 330 core
-layout(location = 0) in vec4 in_position;
-layout(location = 1) in vec3 tex_coords;
+layout(location = 0) in vec2 in_position;
 
-uniform mat4 modelMX;
-uniform mat4 pvmMX;
-
-out vec3 vTexCoord;
-out vec3 vWorldCoord;
+uniform mat4 projMX;    //!< projection matrix
 
 void main()
 {
-    gl_Position = pvmMX * in_position;
-    vTexCoord = tex_coords;
-    vWorldCoord = (modelMX * in_position).xyz;
+    gl_Position = projMX * vec4(in_position, 0.f, 1.f);
 }
+

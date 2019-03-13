@@ -1,9 +1,6 @@
 #version 330 core
 layout(location = 0) out float visibility;
 
-in vec3 vTexCoord;          //!< texture coordinates
-in vec3 vWorldCoord;        //!< texture coordinates
-
 uniform sampler3D volumeTex;            //!< 3D texture handle
 uniform sampler2D transferfunctionTex;  //!< 3D texture handle
 
@@ -16,6 +13,8 @@ uniform int winHeight;          //!< height of the window in pixels
 
 uniform float stepSize;         //!< distance between sample points between
                                 //!< sample points in world coordinates
+uniform float stepSizeVoxel;    //!< distance between sample points in voxels
+
 #define M_PIH   1.570796
 #define M_PI    3.141592
 #define M_2PI   6.283185
