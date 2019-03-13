@@ -109,6 +109,14 @@ namespace mvr
         int loadVolumeFromFile(std::string path, unsigned int timestep = 0);
 
         //---------------------------------------------------------------------
+        // VSFVR Extension
+        //---------------------------------------------------------------------
+        int initializeVsfvr();
+        int calcVisibility();
+        std::array<unsigned int, 2> m_visibilityDimensions;
+        Shader m_shaderVisibility;
+
+        //---------------------------------------------------------------------
         // class-wide constants and default values
         //---------------------------------------------------------------------
         static constexpr int REQUIRED_OGL_VERSION_MAJOR = 3;

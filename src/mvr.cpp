@@ -139,7 +139,10 @@ mvr::Renderer::Renderer() :
     m_showMenues(true),
     m_showControlPointList(false),
     m_tfScreenPosition{ {0, 0} },
-    m_selectedTfControlPointPos(0.f)
+    m_selectedTfControlPointPos(0.f),
+    // VSFVR Extension
+    m_visibilityDimensions{ {512, 512} },
+    m_shaderVisibility()
 {
     // nothing to see here
 }
@@ -240,6 +243,10 @@ int mvr::Renderer::initialize()
             static_cast<float>(m_renderingDimensions[1]),
         0.1f,
         50.0f);
+
+    // VSFVR Extension
+    if (EXIT_SUCCESS == ret)
+        ret = initializeVsfvr();
 
     if (EXIT_SUCCESS == ret)
         m_isInitialized = true;
@@ -832,6 +839,24 @@ int mvr::Renderer::loadVolumeFromFile(
 
     m_volumeDescriptionFile = path;
     return EXIT_SUCCESS;
+}
+
+//-----------------------------------------------------------------------------
+// VSFVR Extension
+//-----------------------------------------------------------------------------
+int mvr::Renderer::initializeVsfvr()
+{
+    m_shaderVisibility =
+        Shader("src/shader/visibility.vert", "src/shader/visibility.frag");
+
+    return EXIT_SUCCESS;
+}
+
+int mvr::Renderer::calcVisibility()
+{
+    std::cout << "Calculating visibility information..." << std::endl;
+
+    return 0;
 }
 
 //-----------------------------------------------------------------------------
