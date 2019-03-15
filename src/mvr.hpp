@@ -108,18 +108,7 @@ namespace mvr
         int saveTransferFunctionToFile(std::string path);
         int loadVolumeFromFile(std::string path, unsigned int timestep = 0);
 
-        //---------------------------------------------------------------------
-        // VSFVR Extension
-        //---------------------------------------------------------------------
-        int initializeVsfvr();
-        int calcVisibility();
-
-        std::array<unsigned int, 2> m_visibilityDimensions;
-        Shader m_shaderVisibility;
-        util::geometry::Quad m_visibilityWindowQuad;
-        glm::mat4 m_visibilityQuadProjMx;
-
-        //---------------------------------------------------------------------
+       //---------------------------------------------------------------------
         // class-wide constants and default values
         //---------------------------------------------------------------------
         static constexpr int REQUIRED_OGL_VERSION_MAJOR = 3;
@@ -256,6 +245,18 @@ namespace mvr
         // for picking of control points in transfer function editor
         std::array<unsigned int,2> m_tfScreenPosition;
         float m_selectedTfControlPointPos;
+
+        //---------------------------------------------------------------------
+        // VSFVR Extension
+        //---------------------------------------------------------------------
+        int initializeVsfvr();
+        int calcVisibility();
+
+        std::array<unsigned int, 2> m_visibilityDimensions;
+        Shader m_shaderVisibility;
+        util::geometry::Quad m_visibilityWindowQuad;
+        glm::mat4 m_visibilityQuadProjMx;
+
 
         //---------------------------------------------------------------------
         // subroutines

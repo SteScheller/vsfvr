@@ -192,36 +192,49 @@ void main()
     // fragment and use it as starting position for the ray
     uvec2 pixelIdx(0,0);
     uvec3 volumeDim(0, 0, 0);
+    vec3 voxelDim(1.f);
 
     uint linIdx = pixelIdx.x * pixelIdx.y;
     //vec3 voxelCoord(0.f, 0.f, 0.f);
     //voxelCoord.x = linIdx ...
-    voxelCoord.y = linIdx ...
-    voxelCoord.z = linIdx ...
+
+    voxelPos.x = voxelDim.x * (((float) voxelIdx.x) + 0.5f)
+    voxelPos.y = voxelDim.y * (((float) voxelIdx.y) + 0.5f)
+    voxelPos.z = voxelDim.z * (((float) voxelIdx.z) + 0.5f)
+
 
     // TODO: as a test write linear idx to visibility and check if
     // array indices match raw data linear array position
     visibility = ((float) linIdx);
 
     // TODO: iterate until we leave the bounding box and check for visibility contribution
-    /*while(1)
+    pos = voxelPos;
+    step = rayDir * stepSize;
+    while ( (pos.x >= bbMin.x) && (pos.y >= bbMin.y) && (pos.z >= bbMin.z) &&
+            (pos.x < bbMax.x) && (pos.y < bbMax.y) && (pos.z < bbMax.z) )
     {
-        pos = rayOrig + x * rayDir;
         volCoord = (pos - bbMin) / (bbMax - bbMin);
-
-        // Check if we are in the volume
-        if ((volCoord.x < 0.f) ||
-            (volCoord.y < 0.f) ||
-            (volCoord.z < 0.f) ||
-            (volCoord.x > 1.f) ||
-            (volCoord.y > 1.f) ||
-            (volCoord.z > 1.f))
-        {
-            break;
-        }
-
         value = texture(volumeTex, volCoord).r;
 
+        // transfer function
+        // adapt this to sample in the middle of the transfer function
+        tfColor = texture(transferfunctionTex, vec2(value, 0.5f));
+        // TODO: change to back to front rendering
+        color = frontToBack(color, tfColor.rgb, tfColor.a, stepSizeVoxel);
+
+
+
+        // TODO: adapt this
+        if (color.a > 0.99f)
+            terminateEarly = true;
+
+        if (terminateEarly)
+            break;
+
+        // Increment position on ray for next iteration
+        pos += step;
+    }
+    /*
         // line-of-sight integration
         color.rgb += vec3(value * dx);
         color.a = 1.f;
