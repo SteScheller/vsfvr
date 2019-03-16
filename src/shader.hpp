@@ -215,6 +215,14 @@ class Shader
     {
         glUniform3f(glGetUniformLocation(m_ID, name.c_str()), x, y, z);
     }
+    void setUVec3(const std::string &name, const glm::uvec3 &value) const
+    {
+        glUniform3uiv(glGetUniformLocation(m_ID, name.c_str()), 1, &value[0]);
+    }
+    void setUVec3(const std::string &name, GLuint x, GLuint y, GLuint z) const
+    {
+        glUniform3ui(glGetUniformLocation(m_ID, name.c_str()), x, y, z);
+    }
     // ------------------------------------------------------------------------
     void setVec4(const std::string &name, const glm::vec4 &value) const
     {

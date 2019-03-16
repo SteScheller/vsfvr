@@ -870,6 +870,8 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility()
 
     m_shaderVisibility.use();
 
+    m_shaderVisibility.setUVec3(
+        "volumeDim", volumeDim[0], volumeDim[1], volumeDim[2]);
     /*glActiveTexture(GL_TEXTURE0);
     m_volumeTex.bind();
     m_shaderVisibility.setInt("volumeTex", 0);
@@ -891,9 +893,9 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility()
     // until the computation is finished
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
     glDispatchCompute(
-            std::ceil(static_cast<float>(volumeDim[0])/ 32.f),
-            std::ceil(static_cast<float>(volumeDim[1])/ 32.f),
-            std::ceil(static_cast<float>(volumeDim[2])/ 32.f));
+            std::ceil(static_cast<float>(volumeDim[0])/ 8.f),
+            std::ceil(static_cast<float>(volumeDim[1])/ 8.f),
+            std::ceil(static_cast<float>(volumeDim[2])/ 8.f));
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 
@@ -1379,7 +1381,7 @@ void mvr::Renderer::drawSettingsWindow()
             for (size_t x = 0; x < 10; ++x)
             {
                 std::printf(
-                    "(%zu, %zu, %zu): %f", x, y, z, visibility[x][y][z]);
+                    "(%zu, %zu, %zu): %06.0f\n", x, y, z, visibility[x][y][z]);
             }
 
         }
