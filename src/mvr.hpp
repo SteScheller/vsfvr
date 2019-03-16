@@ -111,8 +111,8 @@ namespace mvr
        //---------------------------------------------------------------------
         // class-wide constants and default values
         //---------------------------------------------------------------------
-        static constexpr int REQUIRED_OGL_VERSION_MAJOR = 3;
-        static constexpr int REQUIRED_OGL_VERSION_MINOR = 3;
+        static constexpr int REQUIRED_OGL_VERSION_MAJOR = 4;
+        static constexpr int REQUIRED_OGL_VERSION_MINOR = 5;
 
         static constexpr size_t MAX_FILEPATH_LENGTH = 200;
 
@@ -252,11 +252,7 @@ namespace mvr
         int initializeVsfvr();
         int calcVisibility();
 
-        std::array<unsigned int, 2> m_visibilityDimensions;
         Shader m_shaderVisibility;
-        util::geometry::Quad m_visibilityWindowQuad;
-        glm::mat4 m_visibilityQuadProjMx;
-
 
         //---------------------------------------------------------------------
         // subroutines

@@ -141,10 +141,7 @@ mvr::Renderer::Renderer() :
     m_tfScreenPosition{ {0, 0} },
     m_selectedTfControlPointPos(0.f),
     // VSFVR Extension
-    m_visibilityDimensions{ {512, 512} },
-    m_shaderVisibility(),
-    m_visibilityWindowQuad(false),
-    m_visibilityQuadProjMx(glm::ortho(-0.5f, 0.5f, -0.5f, 0.5f))
+    m_shaderVisibility()
 {
     // nothing to see here
 }
@@ -267,11 +264,6 @@ int mvr::Renderer::run()
             std::endl;
         return EXIT_FAILURE;
     }
-
-    // TODO: delete this
-    GLint dummy = 0;
-    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &dummy);
-    std::cout << "Max texture size: " << dummy << std::endl;
 
     // ------------------------------------------------------------------------
     // local variables
@@ -848,10 +840,10 @@ int mvr::Renderer::loadVolumeFromFile(
 //-----------------------------------------------------------------------------
 int mvr::Renderer::initializeVsfvr()
 {
-    m_shaderVisibility =
-        Shader("src/shader/visibility.vert", "src/shader/visibility.frag");
+    m_shaderVisibility = Shader("src/shader/visibility.comp");
 
     // TODO: set up visisbility window quad and according projection matrix
+    // TODO: allocate SSBO for visibility information
     return EXIT_SUCCESS;
 }
 
@@ -859,7 +851,6 @@ int mvr::Renderer::calcVisibility()
 {
     std::cout << "Calculating visibility information..." << std::endl;
 
-    // TODO: Render a quad instead of the cube
     m_shaderVisibility.use();
 
     glActiveTexture(GL_TEXTURE0);
@@ -870,9 +861,6 @@ int mvr::Renderer::calcVisibility()
     m_transferFunction.accessTexture().bind();
     m_shaderVisibility.setInt("transferfunctionTex", 1);
 
-    m_shaderTfColor.setMat4("projMX", m_visibilityQuadProjMx);
-    m_shaderVisibility.setInt("winWidth", m_renderingDimensions[0]);
-    m_shaderVisibility.setInt("winHeight", m_renderingDimensions[1]);
     m_shaderVisibility.setMat4("modelMX", m_volumeModelMx);
     m_shaderVisibility.setMat4(
         "pvmMX", m_volumeProjMx * m_volumeViewMx * m_volumeModelMx);
@@ -882,9 +870,12 @@ int mvr::Renderer::calcVisibility()
     m_shaderVisibility.setFloat("stepSize", m_voxelDiagonal * m_stepSize);
     m_shaderVisibility.setFloat("stepSizeVoxel", m_stepSize);
 
-
-    // TODO: draw call
-    m_visibilityWindowQuad.draw();
+    std::array<size_t, 3> volumeDim =
+        m_volumeData->getVolumeConfig().getVolumeDim();
+    glDispatchCompute(
+            std::ceil(static_cast<float>(volumeDim[0])/ 32.f),
+            std::ceil(static_cast<float>(volumeDim[1])/ 32.f),
+            std::ceil(static_cast<float>(volumeDim[2])/ 32.f));
 
     return 0;
 }
