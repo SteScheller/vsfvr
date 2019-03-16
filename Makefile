@@ -32,7 +32,7 @@ RELEASE_CFLAGS = -DRELEASE -O3
 
 LDFLAGS = -lGL `pkg-config --static --libs glfw3`
 LDFLAGS += -lboost_system -lboost_filesystem -lboost_regex
-LDFLAGS += -lboost_program_options
+LDFLAGS += -lboost_iostreams -lboost_program_options
 LDFLAGS += -lfreeimage
 
 .PHONY: clean

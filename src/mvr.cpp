@@ -12,6 +12,7 @@
 #include <ctime>
 #include <utility>
 #include <memory>
+#include <cstdio>
 
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
@@ -27,6 +28,8 @@
 #include <imgui_impl_opengl3.h>
 
 #include <FreeImage.h>
+
+#include <boost/multi_array.hpp>
 
 #include <json.hpp>
 using json = nlohmann::json;
@@ -847,13 +850,27 @@ int mvr::Renderer::initializeVsfvr()
     return EXIT_SUCCESS;
 }
 
-int mvr::Renderer::calcVisibility()
+boost::multi_array<float, 3> mvr::Renderer::calcVisibility()
 {
-    std::cout << "Calculating visibility information..." << std::endl;
+    std::array<size_t, 3> volumeDim =
+        m_volumeData->getVolumeConfig().getVolumeDim();
+    boost::multi_array<float, 3> visibility(
+        boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
+    std::fill_n(visibility.data(), visibility.num_elements(), 0.f);
+
+    // create shader storage buffer and initialize it
+    GLuint ssbo = 0;
+    glGenBuffers(1, &ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
+    glBufferData(
+        GL_SHADER_STORAGE_BUFFER,
+        visibility.num_elements() * sizeof(float),
+        visibility.data(),
+        GL_DYNAMIC_DRAW);
 
     m_shaderVisibility.use();
 
-    glActiveTexture(GL_TEXTURE0);
+    /*glActiveTexture(GL_TEXTURE0);
     m_volumeTex.bind();
     m_shaderVisibility.setInt("volumeTex", 0);
 
@@ -868,16 +885,26 @@ int mvr::Renderer::calcVisibility()
     m_shaderVisibility.setVec3("bbMin", m_boundingBoxMin.xyz);
     m_shaderVisibility.setVec3("bbMax", m_boundingBoxMax.xyz);
     m_shaderVisibility.setFloat("stepSize", m_voxelDiagonal * m_stepSize);
-    m_shaderVisibility.setFloat("stepSizeVoxel", m_stepSize);
+    m_shaderVisibility.setFloat("stepSizeVoxel", m_stepSize);*/
 
-    std::array<size_t, 3> volumeDim =
-        m_volumeData->getVolumeConfig().getVolumeDim();
+    // bind the visibility data storage, run the compute shader and wait
+    // until the computation is finished
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
     glDispatchCompute(
             std::ceil(static_cast<float>(volumeDim[0])/ 32.f),
             std::ceil(static_cast<float>(volumeDim[1])/ 32.f),
             std::ceil(static_cast<float>(volumeDim[2])/ 32.f));
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 
-    return 0;
+    // copy the compute shader output into the visibility data structure
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    GLfloat* ssboPtr =
+        (GLfloat*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+    std::memcpy(visibility.data(), ssboPtr, visibility.num_elements());
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+    return visibility;
 }
 
 //-----------------------------------------------------------------------------
@@ -1342,6 +1369,20 @@ void mvr::Renderer::drawSettingsWindow()
             saveConfigToFile(std::string(filename));
         }
 
+        ImGui::Separator();
+        if(ImGui::Button("calc view entropy"))
+        {
+            std::cout << "Calculating visibility information..." << std::endl;
+            boost::multi_array<float, 3> visibility = calcVisibility();
+            for (size_t z = 0; z < 10; ++z)
+            for (size_t y = 0; y < 10; ++y)
+            for (size_t x = 0; x < 10; ++x)
+            {
+                std::printf(
+                    "(%zu, %zu, %zu): %f", x, y, z, visibility[x][y][z]);
+            }
+
+        }
 
         if ((std::difftime(std::time(nullptr), timer) < 3.f) &&
             (filename[0] != '\0'))
@@ -1895,6 +1936,7 @@ void::mvr::Renderer::reloadShaders()
         Shader("src/shader/tfFunc.vert", "src/shader/tfFunc.frag");
     m_shaderTfPoint =
         Shader("src/shader/tfPoint.vert", "src/shader/tfPoint.frag");
+    m_shaderVisibility = Shader("src/shader/visibility.comp");
 }
 
 void mvr::Renderer::resizeRendering(

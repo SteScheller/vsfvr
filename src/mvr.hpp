@@ -9,6 +9,8 @@
 #define GLM_FORCE_SWIZZLE
 #include <glm/glm.hpp>
 
+#include <boost/multi_array.hpp>
+
 #include <json.hpp>
 using json = nlohmann::json;
 
@@ -250,7 +252,7 @@ namespace mvr
         // VSFVR Extension
         //---------------------------------------------------------------------
         int initializeVsfvr();
-        int calcVisibility();
+        boost::multi_array<float, 3> calcVisibility();
 
         Shader m_shaderVisibility;
 
