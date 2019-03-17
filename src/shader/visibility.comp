@@ -10,16 +10,13 @@ layout(std430, binding = 0) writeonly buffer VoxelVisibility
 uniform uvec3 volumeDim;    //!< spatial extents of the volume in number of
                             //!< voxels in the corresponding dimension
 
-/*uniform sampler3D volumeTex;            //!< 3D texture handle
-uniform sampler2D transferfunctionTex;  //!< 3D texture handle
-
-
 uniform vec3 eyePos;            //!< camera / eye position in world coordinates
 uniform vec3 bbMin;             //!< axes aligned bounding box min. corner
 uniform vec3 bbMax;             //!< axes aligned bounding box max. corner
 
-uniform int winWidth;           //!< width of the window in pixels
-uniform int winHeight;          //!< height of the window in pixels
+/*uniform sampler3D volumeTex;            //!< 3D texture handle
+uniform sampler2D transferfunctionTex;  //!< 3D texture handle
+
 
 uniform float stepSize;         //!< distance between sample points between
                                 //!< sample points in world coordinates
@@ -144,15 +141,27 @@ void main()
         (gl_GlobalInvocationID.z > volumeDim.z) )
         return;
 
+    // index for storing the calculated visibility in the linear shader
+    // storage buffer object
     uint idx =
         gl_GlobalInvocationID.z * volumeDim.y * volumeDim.x +
         gl_GlobalInvocationID.y * volumeDim.x +
         gl_GlobalInvocationID.x;
 
-    visibility[idx] =
-        (gl_GlobalInvocationID.x % 10) * 10000 +
-        (gl_GlobalInvocationID.y % 10) * 100 +
-        (gl_GlobalInvocationID.z % 10);
+    // For performance reasons the camera position already has to be in the
+    // model space of the cuboid volume.
+    vec3 voxelPos =
+        bbMin +
+        vec3(gl_GlobalInvocationID.xyz) / vec3(volumeDim) * (bbMax - bbMin);
+    vec3 rayDir = normalize(eyePos - voxelPos);
+
+
+    float opacity = 0.f;
+    visibility[idx] = 1.f - opacity;
+
+    // for debugging purposes
+    //visibility[idx] = voxelPos.y;
+    visibility[idx] = rayDir.x;
 
     // TODO: calculate voxel center position that corresponds to this
     // fragment and use it as starting position for the ray
@@ -177,7 +186,7 @@ void main()
     pos = voxelPos;
     step = rayDir * stepSize;
     while ( (pos.x >= bbMin.x) && (pos.y >= bbMin.y) && (pos.z >= bbMin.z) &&
-            (pos.x < bbMax.x) && (pos.y < bbMax.y) && (pos.z < bbMax.z) )
+            (pos.x <= bbMax.x) && (pos.y <= bbMax.y) && (pos.z <= bbMax.z) )
     {
         volCoord = (pos - bbMin) / (bbMax - bbMin);
         value = texture(volumeTex, volCoord).r;

@@ -872,6 +872,12 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility()
 
     m_shaderVisibility.setUVec3(
         "volumeDim", volumeDim[0], volumeDim[1], volumeDim[2]);
+
+    glm::vec4 eyePos =
+        glm::inverse(m_volumeModelMx) * glm::vec4(m_cameraPosition, 1.f);
+    m_shaderVisibility.setVec3("eyePos", eyePos.xyz);
+    m_shaderVisibility.setVec3("bbMin", -0.5f, -0.5f, -0.5f);
+    m_shaderVisibility.setVec3("bbMax", 0.5f, 0.5f, 0.5f);
     /*glActiveTexture(GL_TEXTURE0);
     m_volumeTex.bind();
     m_shaderVisibility.setInt("volumeTex", 0);
@@ -1382,7 +1388,8 @@ void mvr::Renderer::drawSettingsWindow()
             for (size_t x = 0; x < 10; ++x)
             {
                 std::printf(
-                    "(%zu, %zu, %zu): %06.0f\n", x, y, z, visibility[z][y][x]);
+                    //"(%zu, %zu, %zu): %06.0f\n", x, y, z, visibility[z][y][x]);
+                    "(%zu, %zu, %zu): %.4f\n", x, y, z, visibility[z][y][x]);
             }
 
         }
