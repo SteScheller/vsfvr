@@ -903,7 +903,8 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility()
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
     GLfloat* ssboPtr =
         (GLfloat*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-    std::memcpy(visibility.data(), ssboPtr, visibility.num_elements());
+    std::memcpy(
+        visibility.data(), ssboPtr, sizeof(float) * visibility.num_elements());
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
     return visibility;
@@ -1381,7 +1382,7 @@ void mvr::Renderer::drawSettingsWindow()
             for (size_t x = 0; x < 10; ++x)
             {
                 std::printf(
-                    "(%zu, %zu, %zu): %06.0f\n", x, y, z, visibility[x][y][z]);
+                    "(%zu, %zu, %zu): %06.0f\n", x, y, z, visibility[z][y][x]);
             }
 
         }
