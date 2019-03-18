@@ -14,19 +14,18 @@ uniform vec3 eyePos;            //!< camera / eye position in world coordinates
 uniform vec3 bbMin;             //!< axes aligned bounding box min. corner
 uniform vec3 bbMax;             //!< axes aligned bounding box max. corner
 
-/*uniform sampler3D volumeTex;            //!< 3D texture handle
+uniform sampler3D volumeTex;            //!< 3D texture handle
 uniform sampler2D transferfunctionTex;  //!< 3D texture handle
 
-
 uniform float stepSize;         //!< distance between sample points between
-                                //!< sample points in world coordinates
+                                //!< sample points in model space
 uniform float stepSizeVoxel;    //!< distance between sample points in voxels
 
 #define M_PIH   1.570796
 #define M_PI    3.141592
 #define M_2PI   6.283185
 #define EPS     0.000001
-*/
+
 /*!
  *  \brief computes the output color with front to back compositing
  *
@@ -124,11 +123,6 @@ void main()
     vec3 volCoord = vec3(0.f);      //!< coordinates for texture access
     bool terminateEarly = false;    //!< early ray termination
 
-    vec3 pos = vec3(0.f);   //!< current position on the ray in world
-                            //!< coordinates
-    float tNear, tFar;      //!< near and far distances where the shot ray
-                            //!< intersects the bounding box of the volume data
-
     vec3 rayOrig = eyePos;                          //!< origin of the ray
     vec3 rayDir = normalize(vWorldCoord - rayOrig); //!< direction of the ray
 
@@ -156,12 +150,22 @@ void main()
     vec3 rayDir = normalize(eyePos - voxelPos);
 
 
+    // ray marching and opacity accumulation
     float opacity = 0.f;
+    while
+    vec3 pos = voxelPos;
+    vec3 stepInc = rayDir * stepSize;
+    while ( (pos.x >= bbMin.x) && (pos.y >= bbMin.y) && (pos.z >= bbMin.z) &&
+            (pos.x <= bbMax.x) && (pos.y <= bbMax.y) && (pos.z <= bbMax.z) )
+    {
+        // TODO ...
+        pos += stepInc;
+    }
     visibility[idx] = 1.f - opacity;
 
     // for debugging purposes
     //visibility[idx] = voxelPos.y;
-    visibility[idx] = rayDir.x;
+    //visibility[idx] = rayDir.x;
 
     // TODO: calculate voxel center position that corresponds to this
     // fragment and use it as starting position for the ray

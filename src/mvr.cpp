@@ -870,15 +870,8 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility()
 
     m_shaderVisibility.use();
 
-    m_shaderVisibility.setUVec3(
-        "volumeDim", volumeDim[0], volumeDim[1], volumeDim[2]);
-
-    glm::vec4 eyePos =
-        glm::inverse(m_volumeModelMx) * glm::vec4(m_cameraPosition, 1.f);
-    m_shaderVisibility.setVec3("eyePos", eyePos.xyz);
-    m_shaderVisibility.setVec3("bbMin", -0.5f, -0.5f, -0.5f);
-    m_shaderVisibility.setVec3("bbMax", 0.5f, 0.5f, 0.5f);
-    /*glActiveTexture(GL_TEXTURE0);
+    // textures
+    glActiveTexture(GL_TEXTURE0);
     m_volumeTex.bind();
     m_shaderVisibility.setInt("volumeTex", 0);
 
@@ -886,14 +879,21 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility()
     m_transferFunction.accessTexture().bind();
     m_shaderVisibility.setInt("transferfunctionTex", 1);
 
-    m_shaderVisibility.setMat4("modelMX", m_volumeModelMx);
-    m_shaderVisibility.setMat4(
-        "pvmMX", m_volumeProjMx * m_volumeViewMx * m_volumeModelMx);
-    m_shaderVisibility.setVec3("eyePos", m_cameraPosition);
-    m_shaderVisibility.setVec3("bbMin", m_boundingBoxMin.xyz);
-    m_shaderVisibility.setVec3("bbMax", m_boundingBoxMax.xyz);
-    m_shaderVisibility.setFloat("stepSize", m_voxelDiagonal * m_stepSize);
-    m_shaderVisibility.setFloat("stepSizeVoxel", m_stepSize);*/
+    // other uniform parameters
+    m_shaderVisibility.setUVec3(
+        "volumeDim", volumeDim[0], volumeDim[1], volumeDim[2]);
+    glm::vec4 eyePos =
+        glm::inverse(m_volumeModelMx) * glm::vec4(m_cameraPosition, 1.f);
+    m_shaderVisibility.setVec3("eyePos", eyePos.xyz);
+    m_shaderVisibility.setVec3("bbMin", -0.5f, -0.5f, -0.5f);
+    m_shaderVisibility.setVec3("bbMax", 0.5f, 0.5f, 0.5f);
+    float voxelDiagonalModelSpace = std::sqrt(
+            std::pow(1.f / static_cast<float>(volumeDim[0]), 2.f) +
+            std::pow(1.f / static_cast<float>(volumeDim[1]), 2.f) +
+            std::pow(1.f / static_cast<float>(volumeDim[2]), 2.f));
+    m_shaderVisibility.setFloat(
+        "stepSize", voxelDiagonalModelSpace * m_stepSize);
+    m_shaderVisibility.setFloat("stepSizeVoxel", m_stepSize);
 
     // bind the visibility data storage, run the compute shader and wait
     // until the computation is finished
