@@ -892,8 +892,8 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility()
             std::pow(1.f / static_cast<float>(volumeDim[1]), 2.f) +
             std::pow(1.f / static_cast<float>(volumeDim[2]), 2.f));
     m_shaderVisibility.setFloat(
-        "stepSize", voxelDiagonalModelSpace * m_stepSize);
-    m_shaderVisibility.setFloat("stepSizeVoxel", m_stepSize);
+        "stepSize", voxelDiagonalModelSpace * 0.5f * std::sqrt(3.f));
+    m_shaderVisibility.setFloat("stepSizeVoxel", 0.5f * std::sqrt(3.f));
 
     // bind the visibility data storage, run the compute shader and wait
     // until the computation is finished
@@ -1388,7 +1388,6 @@ void mvr::Renderer::drawSettingsWindow()
             for (size_t x = 0; x < 10; ++x)
             {
                 std::printf(
-                    //"(%zu, %zu, %zu): %06.0f\n", x, y, z, visibility[z][y][x]);
                     "(%zu, %zu, %zu): %.4f\n", x, y, z, visibility[z][y][x]);
             }
 

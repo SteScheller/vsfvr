@@ -120,13 +120,10 @@ void main()
 
     bool intersect = false;         //!< flag if we did hit the bounding box
     float temp = 0.f;               //!< temporary variable
-    vec3 volCoord = vec3(0.f);      //!< coordinates for texture access
-    bool terminateEarly = false;    //!< early ray termination
 
     vec3 rayOrig = eyePos;                          //!< origin of the ray
     vec3 rayDir = normalize(vWorldCoord - rayOrig); //!< direction of the ray
 
-    vec4 tfColor = vec4(0.f);       //!< color value from the transferfunction
     */
 
     // terminate if the invocation ID does not match a voxel index
@@ -151,103 +148,39 @@ void main()
 
 
     // ray marching and opacity accumulation
-    float opacity = 0.f;
-    while
+    float opacity = 0.f;    //!< accumulated opacity
+    bool terminateEarly = false;    //!< early ray termination
+
     vec3 pos = voxelPos;
     vec3 stepInc = rayDir * stepSize;
     while ( (pos.x >= bbMin.x) && (pos.y >= bbMin.y) && (pos.z >= bbMin.z) &&
             (pos.x <= bbMax.x) && (pos.y <= bbMax.y) && (pos.z <= bbMax.z) )
     {
-        // TODO ...
+        // sample the volume texture
+        vec3 volCoord = (pos - bbMin) / (bbMax - bbMin);
+        float value = texture(volumeTex, volCoord).r;
+        vec4 tfColor = texture(transferfunctionTex, vec2(value, 0.5f));
+
+        // alpha blending
+        float adjustedAlpha = (1.f - pow(1.f - tfColor.a, stepSizeVoxel));
+        opacity += (1.f - opacity) * adjustedAlpha;
+
+        if (opacity > 0.999f)
+        {
+            terminateEarly = true;
+            opacity = 1.f;
+        }
+
+        if (terminateEarly)
+            break;
+
         pos += stepInc;
     }
+
     visibility[idx] = 1.f - opacity;
 
     // for debugging purposes
     //visibility[idx] = voxelPos.y;
     //visibility[idx] = rayDir.x;
-
-    // TODO: calculate voxel center position that corresponds to this
-    // fragment and use it as starting position for the ray
-    /*uvec2 pixelIdx(0,0);
-    uvec3 volumeDim(0, 0, 0);
-    vec3 voxelDim(1.f);
-
-    uint linIdx = pixelIdx.x * pixelIdx.y;
-    //vec3 voxelCoord(0.f, 0.f, 0.f);
-    //voxelCoord.x = linIdx ...
-
-    voxelPos.x = voxelDim.x * (((float) voxelIdx.x) + 0.5f)
-    voxelPos.y = voxelDim.y * (((float) voxelIdx.y) + 0.5f)
-    voxelPos.z = voxelDim.z * (((float) voxelIdx.z) + 0.5f)
-
-
-    // TODO: as a test write linear idx to visibility and check if
-    // array indices match raw data linear array position
-    visibility = ((float) linIdx);
-
-    // TODO: iterate until we leave the bounding box and check for visibility contribution
-    pos = voxelPos;
-    step = rayDir * stepSize;
-    while ( (pos.x >= bbMin.x) && (pos.y >= bbMin.y) && (pos.z >= bbMin.z) &&
-            (pos.x <= bbMax.x) && (pos.y <= bbMax.y) && (pos.z <= bbMax.z) )
-    {
-        volCoord = (pos - bbMin) / (bbMax - bbMin);
-        value = texture(volumeTex, volCoord).r;
-
-        // transfer function
-        // adapt this to sample in the middle of the transfer function
-        tfColor = texture(transferfunctionTex, vec2(value, 0.5f));
-        // TODO: change to back to front rendering
-        color = frontToBack(color, tfColor.rgb, tfColor.a, stepSizeVoxel);
-
-
-
-        // TODO: adapt this
-        if (color.a > 0.99f)
-            terminateEarly = true;
-
-        if (terminateEarly)
-            break;
-
-        // Increment position on ray for next iteration
-        pos += step;
-    }*/
-    /*
-        // line-of-sight integration
-        color.rgb += vec3(value * dx);
-        color.a = 1.f;
-        if (color.r > 0.99f)
-        {
-            if(ambientOcclusion)
-            {
-                pTexCoord = (pos - bbMin) / (bbMax - bbMin);
-                n = -gradient(volumeTex, pTexCoord, dx, gradMethod);
-                aoFactor = calcAmbientOcclussionFactor(
-                    volumeTex,
-                    pTexCoord,
-                    n,
-                    aoRadius,
-                    aoSamples,
-                    value);
-                color.rgb = mix(
-                    color.rgb, aoFactor * color.rgb, aoProportion);
-            }
-            terminateEarly = true;
-        }
-
-        // transfer function
-        tfColor = texture(transferfunctionTex, vec2(value, 0.5f));
-        // TODO: change to back to front rendering
-        color = frontToBack(color, tfColor.rgb, tfColor.a, stepSizeVoxel);
-
-        if (color.a > 0.99f)
-            terminateEarly = true;
-
-        if (terminateEarly)
-            break;
-    }
-
-    visibility = 0.f;*/
 }
 
