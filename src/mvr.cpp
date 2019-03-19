@@ -845,12 +845,11 @@ int mvr::Renderer::initializeVsfvr()
 {
     m_shaderVisibility = Shader("src/shader/visibility.comp");
 
-    // TODO: set up visisbility window quad and according projection matrix
-    // TODO: allocate SSBO for visibility information
     return EXIT_SUCCESS;
 }
 
-boost::multi_array<float, 3> mvr::Renderer::calcVisibility()
+boost::multi_array<float, 3> mvr::Renderer::calcVisibility(
+        glm::vec3 cameraPosition)
 {
     std::array<size_t, 3> volumeDim =
         m_volumeData->getVolumeConfig().getVolumeDim();
@@ -883,7 +882,7 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility()
     m_shaderVisibility.setUVec3(
         "volumeDim", volumeDim[0], volumeDim[1], volumeDim[2]);
     glm::vec4 eyePos =
-        glm::inverse(m_volumeModelMx) * glm::vec4(m_cameraPosition, 1.f);
+        glm::inverse(m_volumeModelMx) * glm::vec4(cameraPosition, 1.f);
     m_shaderVisibility.setVec3("eyePos", eyePos.xyz);
     m_shaderVisibility.setVec3("bbMin", -0.5f, -0.5f, -0.5f);
     m_shaderVisibility.setVec3("bbMax", 0.5f, 0.5f, 0.5f);
@@ -916,6 +915,64 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility()
     return visibility;
 }
 
+double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
+{
+    double viewEntropy = 0.0;
+
+    std::cout << "Calculating visibility information..." << std::endl;
+    boost::multi_array<float, 3> visibility = calcVisibility(cameraPosition);
+
+    // view entropy:
+    // - visual probabilities
+    //
+    // visual probabilities:
+    // - sigma (normalization factor from summing up visibility over
+    //   noteworthines factors)
+    // - visibilities
+    // - noteworthiness
+    //
+    // noteworthiness:
+    // - bin frequencies
+    // - alpha values
+
+    /*for (size_t z = 0; z < 10; ++z)
+    for (size_t y = 0; y < 10; ++y)
+    for (size_t x = 0; x < 10; ++x)
+    {
+        std::printf(
+            "(%zu, %zu, %zu): %.4f\n", x, y, z, visibility[z][y][x]);
+    }*/
+    return viewEntropy;
+}
+
+double mvr::Renderer::calcTimeseriesViewEntropy(glm::vec3 cameraPosition)
+{
+    double viewEntropy = 0.0;
+
+    std::cout << "Calculating visibility information..." << std::endl;
+    boost::multi_array<float, 3> visibility = calcVisibility(cameraPosition);
+
+    // view entropy:
+    // - visual probabilities
+    //
+    // visual probabilities:
+    // - sigma (normalization factor from summing up visibility over
+    //   noteworthines factors)
+    // - visibilities
+    // - noteworthiness
+    //
+    // noteworthiness:
+    // - bin frequencies
+    // - alpha values
+    //
+    // change for time-series view assessment:
+    // - entropies change to conditional entropies which are based
+    //   on -> conditional visual probabilites -> conditional
+    //   noteworthiness -> new alpha factors
+    // - conditional noteworthiness changes from
+
+    return viewEntropy;
+}
 //-----------------------------------------------------------------------------
 // subroutines
 //-----------------------------------------------------------------------------
@@ -1378,19 +1435,19 @@ void mvr::Renderer::drawSettingsWindow()
             saveConfigToFile(std::string(filename));
         }
 
+        // VSFVR extension
         ImGui::Separator();
-        if(ImGui::Button("calc view entropy"))
+        if(ImGui::Button("calc timestep view entropy"))
         {
-            std::cout << "Calculating visibility information..." << std::endl;
-            boost::multi_array<float, 3> visibility = calcVisibility();
-            for (size_t z = 0; z < 10; ++z)
-            for (size_t y = 0; y < 10; ++y)
-            for (size_t x = 0; x < 10; ++x)
-            {
-                std::printf(
-                    "(%zu, %zu, %zu): %.4f\n", x, y, z, visibility[z][y][x]);
-            }
+            double viewEntropy = calcTimestepViewEntropy(m_cameraPosition);
+            std::cout << "timestep view entropy: " << viewEntropy << std::endl;
 
+        }
+        if(ImGui::Button("calc time-series view entropy"))
+        {
+            double viewEntropy = calcTimeseriesViewEntropy(m_cameraPosition);
+            std::cout <<
+                "time-series view entropy: " << viewEntropy << std::endl;
         }
 
         if ((std::difftime(std::time(nullptr), timer) < 3.f) &&

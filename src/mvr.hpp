@@ -252,7 +252,9 @@ namespace mvr
         // VSFVR Extension
         //---------------------------------------------------------------------
         int initializeVsfvr();
-        boost::multi_array<float, 3> calcVisibility();
+        double calcTimestepViewEntropy(glm::vec3 cameraPosition);
+        double calcTimeseriesViewEntropy(glm::vec3 cameraPosition);
+        boost::multi_array<float, 3> calcVisibility(glm::vec3 cameraPosition);
 
         Shader m_shaderVisibility;
 
