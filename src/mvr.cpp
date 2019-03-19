@@ -2048,7 +2048,7 @@ void mvr::Renderer::cursorPosition_cb(
     mvr::Renderer *pThis =
         reinterpret_cast<mvr::Renderer*>(glfwGetWindowUserPointer(window));
 
-    if (GLFW_PRESS == glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE))
+    if (GLFW_PRESS == glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT))
     {
         glm::vec3 polar = util::cartesianToPolar<glm::vec3>(
             pThis->m_cameraPosition);
@@ -2063,7 +2063,7 @@ void mvr::Renderer::cursorPosition_cb(
 
         pThis->m_cameraPosition = util::polarToCartesian<glm::vec3>(polar);
     }
-    else if (GLFW_PRESS == glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT))
+    else if (GLFW_PRESS == glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE))
     {
         glm::vec3 horizontal = glm::normalize(
             glm::cross(-(pThis->m_cameraPosition), glm::vec3(0.f, 1.f, 0.f)));
