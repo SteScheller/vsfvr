@@ -874,7 +874,7 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility(
         glGenBuffers(1, &alphaSsbo);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, alphaSsbo);
         glNamedBufferData(
-            visibilitySsbo,
+            alphaSsbo,
             visibility.num_elements() * sizeof(float),
             alphaData,
             GL_DYNAMIC_DRAW);
@@ -893,18 +893,24 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility(
     // other uniform parameters
     m_shaderVisibility.setUVec3(
         "volumeDim", volumeDim[0], volumeDim[1], volumeDim[2]);
+    glm::vec3 voxelSize = glm::vec3(
+        1.f / static_cast<float>(volumeDim[0]),
+        1.f / static_cast<float>(volumeDim[1]),
+        1.f / static_cast<float>(volumeDim[2]));
+    m_shaderVisibility.setVec3("voxelSize", voxelSize);
     glm::vec4 eyePos =
         glm::inverse(m_volumeModelMx) * glm::vec4(cameraPosition, 1.f);
     m_shaderVisibility.setVec3("eyePos", eyePos.xyz);
     m_shaderVisibility.setVec3("bbMin", -0.5f, -0.5f, -0.5f);
     m_shaderVisibility.setVec3("bbMax", 0.5f, 0.5f, 0.5f);
     float voxelDiagonalModelSpace = std::sqrt(
-            std::pow(1.f / static_cast<float>(volumeDim[0]), 2.f) +
-            std::pow(1.f / static_cast<float>(volumeDim[1]), 2.f) +
-            std::pow(1.f / static_cast<float>(volumeDim[2]), 2.f));
+        std::pow(1.f / static_cast<float>(volumeDim[0]), 2.f) +
+        std::pow(1.f / static_cast<float>(volumeDim[1]), 2.f) +
+        std::pow(1.f / static_cast<float>(volumeDim[2]), 2.f));
     m_shaderVisibility.setFloat(
-        "stepSize", voxelDiagonalModelSpace * 0.5f * std::sqrt(3.f));
-    m_shaderVisibility.setFloat("stepSizeVoxel", 0.5f * std::sqrt(3.f));
+        "stepSize", voxelDiagonalModelSpace * m_stepSize);
+    m_shaderVisibility.setFloat("voxelDiagonal", voxelDiagonalModelSpace);
+    m_shaderVisibility.setFloat("stepSizeVoxel", m_stepSize);
     m_shaderVisibility.setBool(
         "outputAlpha", (alphaData != nullptr) ? true : false);
 
@@ -938,7 +944,6 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility(
             alphaData, ssboPtr, sizeof(float) * visibility.num_elements());
         glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
     }
-
     return visibility;
 }
 
