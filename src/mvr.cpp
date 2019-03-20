@@ -849,7 +849,8 @@ int mvr::Renderer::initializeVsfvr()
 }
 
 boost::multi_array<float, 3> mvr::Renderer::calcVisibility(
-        glm::vec3 cameraPosition)
+        glm::vec3 cameraPosition,
+        float* alphaData)
 {
     std::array<size_t, 3> volumeDim =
         m_volumeData->getVolumeConfig().getVolumeDim();
@@ -857,16 +858,27 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility(
         boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
     std::fill_n(visibility.data(), visibility.num_elements(), 0.f);
 
-    // create shader storage buffer and initialize it
-    GLuint ssbo = 0;
-    glGenBuffers(1, &ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
-    glBufferData(
-        GL_SHADER_STORAGE_BUFFER,
+    // create shader storage buffers and initialize them
+    GLuint visibilitySsbo = 0;
+    glGenBuffers(1, &visibilitySsbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, visibilitySsbo);
+    glNamedBufferData(
+        visibilitySsbo,
         visibility.num_elements() * sizeof(float),
         visibility.data(),
         GL_DYNAMIC_DRAW);
 
+    GLuint alphaSsbo = 0;
+    if (alphaData != nullptr)
+    {
+        glGenBuffers(1, &alphaSsbo);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, alphaSsbo);
+        glNamedBufferData(
+            visibilitySsbo,
+            visibility.num_elements() * sizeof(float),
+            alphaData,
+            GL_DYNAMIC_DRAW);
+    }
     m_shaderVisibility.use();
 
     // textures
@@ -893,24 +905,39 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility(
     m_shaderVisibility.setFloat(
         "stepSize", voxelDiagonalModelSpace * 0.5f * std::sqrt(3.f));
     m_shaderVisibility.setFloat("stepSizeVoxel", 0.5f * std::sqrt(3.f));
+    m_shaderVisibility.setBool(
+        "outputAlpha", (alphaData != nullptr) ? true : false);
 
-    // bind the visibility data storage, run the compute shader and wait
+    // bind the storage buffer objects, run the compute shader and wait
     // until the computation is finished
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, visibilitySsbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, alphaSsbo);
     glDispatchCompute(
             std::ceil(static_cast<float>(volumeDim[0])/ 8.f),
             std::ceil(static_cast<float>(volumeDim[1])/ 8.f),
             std::ceil(static_cast<float>(volumeDim[2])/ 8.f));
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
 
     // copy the compute shader output into the visibility data structure
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, visibilitySsbo);
     GLfloat* ssboPtr =
         (GLfloat*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
     std::memcpy(
         visibility.data(), ssboPtr, sizeof(float) * visibility.num_elements());
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+    if (alphaData != nullptr)
+    {
+        // copy the compute shader output into the alpha data structure
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, alphaSsbo);
+        ssboPtr =
+            (GLfloat*) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+        std::memcpy(
+            alphaData, ssboPtr, sizeof(float) * visibility.num_elements());
+        glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    }
 
     return visibility;
 }
@@ -919,8 +946,19 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
 {
     double viewEntropy = 0.0;
 
+    std::array<size_t, 3> volumeDim =
+        m_volumeData->getVolumeConfig().getVolumeDim();
+
     std::cout << "Calculating visibility information..." << std::endl;
-    boost::multi_array<float, 3> visibility = calcVisibility(cameraPosition);
+    boost::multi_array<float, 3> alpha(
+        boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
+    boost::multi_array<float, 3> visibility =
+        calcVisibility(cameraPosition, alpha.data());
+
+    std::cout << "Calculating noteworthiness factor..." << std::endl;
+    util::tf::discreteTf1D_t tf =
+        m_transferFunction.getDiscretized(0.f, 255.f, 256);
+    uint8_t *rawData = static_cast<uint8_t*>(m_volumeData->getRawData());
 
     // view entropy:
     // - visual probabilities
@@ -935,13 +973,20 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
     // - bin frequencies
     // - alpha values
 
-    /*for (size_t z = 0; z < 10; ++z)
-    for (size_t y = 0; y < 10; ++y)
-    for (size_t x = 0; x < 10; ++x)
+    // Debugging output
+    for (size_t z = 0; z < volumeDim[2]; ++z)
+    for (size_t y = 0; y < volumeDim[1]; ++y)
+    for (size_t x = 0; x < volumeDim[0]; ++x)
     {
         std::printf(
-            "(%zu, %zu, %zu): %.4f\n", x, y, z, visibility[z][y][x]);
-    }*/
+            "(%zu, %zu, %zu): value=%hhu, visibility=%.4f, alpha=%.4f\n",
+            x,
+            y,
+            z,
+            rawData[x + y * volumeDim[0] + z * volumeDim[0] * volumeDim[1]],
+            visibility[z][y][x],
+            alpha[z][y][x]);
+    }
     return viewEntropy;
 }
 

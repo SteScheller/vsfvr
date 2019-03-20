@@ -7,6 +7,11 @@ layout(std430, binding = 0) writeonly buffer VoxelVisibility
     float visibility[];
 };
 
+layout(std430, binding = 1) writeonly buffer VoxelAlpha
+{
+    float alpha[];
+};
+
 uniform uvec3 volumeDim;    //!< spatial extents of the volume in number of
                             //!< voxels in the corresponding dimension
 
@@ -21,95 +26,12 @@ uniform float stepSize;         //!< distance between sample points between
                                 //!< sample points in model space
 uniform float stepSizeVoxel;    //!< distance between sample points in voxels
 
+uniform bool outputAlpha; //!< also output the alpha value of the voxel
+
 #define M_PIH   1.570796
 #define M_PI    3.141592
 #define M_2PI   6.283185
 #define EPS     0.000001
-
-/*!
- *  \brief computes the output color with front to back compositing
- *
- *  \param input input color as RGBA vector
- *  \param c color of the blended element
- *  \param a alpha of the blended element
- *  \param tStep current step size over basis step size used to adjust the
- *               opacity contribution
- *
- *  \return output color as RGBA vector
- */
-/*vec4 frontToBack(vec4 inRGBA, vec3 c, float a, float tStep)
-{
-    vec4 outRGBA;
-    float adjustedAlpha = 0.f;
-
-    adjustedAlpha = (1.f - pow(1.f - a, tStep));
-
-    outRGBA.rgb = inRGBA.rgb + (1.f - inRGBA.a) * c * adjustedAlpha;
-    outRGBA.a = inRGBA.a + (1.f - inRGBA.a) * adjustedAlpha;
-
-    return outRGBA;
-}*/
-
-/*!
- *  \brief Intersects a ray with an AABB and returns the intersection points
- *
- *  Intersection test with axes-aligned bounding box according to the slab
- *  method; It relies on IEEE 754 floating-point properties (see elementwise
- *  inverse of rayDir vector).
- *
- *  \param rayOrig The origin of the ray
- *  \param rayDir The direction of the ray
- *  \param tNear Out: distance from ray origin to first intersection point
- *  \param tFar Out: distance from ray origin to second intersection point
- *  \return True if the ray intersects the bounding box
- */
-/*bool intersectBoundingBox(
-    vec3 rayOrig, vec3 rayDir, out float tNear, out float tFar)
-{
-    vec3 invR = vec3(1.0) / rayDir;
-    vec3 tbot = invR * (bbMin - rayOrig);
-    vec3 ttop = invR * (bbMax - rayOrig);
-
-    vec3 tmin = min(ttop, tbot);
-    vec3 tmax = max(ttop, tbot);
-
-    float largestTMin = max(max(tmin.x, tmin.y), max(tmin.x, tmin.z));
-    float smallestTMax = min(min(tmax.x, tmax.y), min(tmax.x, tmax.z));
-
-    tNear = largestTMin;
-    tFar = smallestTMax;
-
-    return (smallestTMax > largestTMin);
-}*/
-
-/*!
- *  \brief Intersects a ray with an infinite plane
- *
- *  Intersection test of ray with plane based on:
- *  stackoverflow.com/questions/23975555/how-to-do-ray-plane-intersection
- *
- *  \param rayOrig The origin of the ray
- *  \param rayDir The direction of the ray
- *  \param planeBase The base point of the plane
- *  \param planeNormal The normal of the plane
- *  \param t Out: distance from ray origin to the intersection point
- *  \return True if the ray intersects the plane
- */
-/*bool intersectPlane(
-        vec3 rayOrig, vec3 rayDir, vec3 planeBase, vec3 planeNormal, out float t)
-{
-    bool intersect = false;
-    t = 0.f;
-
-    float denom = dot(rayDir, planeNormal);
-    if (abs(denom) > EPS)
-    {
-        t = dot(planeBase - rayOrig, planeNormal) / denom;
-        if (t >= EPS) intersect = true;
-    }
-
-    return intersect;
-}*/
 
 // ----------------------------------------------------------------------------
 //   main
@@ -153,6 +75,15 @@ void main()
 
     vec3 pos = voxelPos;
     vec3 stepInc = rayDir * stepSize;
+
+    if (outputAlpha)
+    {
+        vec3 volCoord = (pos - bbMin) / (bbMax - bbMin);
+        float value = texture(volumeTex, volCoord).r;
+        vec4 tfColor = texture(transferfunctionTex, vec2(value, 0.5f));
+
+        alpha[idx] = tfColor.a;
+    }
     while ( (pos.x >= bbMin.x) && (pos.y >= bbMin.y) && (pos.z >= bbMin.z) &&
             (pos.x <= bbMax.x) && (pos.y <= bbMax.y) && (pos.z <= bbMax.z) )
     {
