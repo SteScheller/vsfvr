@@ -64,7 +64,7 @@ mvr::Renderer::Renderer() :
     m_showTfWindow(true),
     m_showHistogramWindow(true),
     m_semilogHistogram(false),
-    m_binNumberHistogram(255),
+    m_binNumberHistogram(256),
     m_yLimitHistogramMax(100000),
     m_xLimitsMin(0.f),
     m_xLimitsMax(255.f),
@@ -965,6 +965,7 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
         m_transferFunction.getDiscretized(0.f, 255.f, 256);
     uint8_t *rawData = static_cast<uint8_t*>(m_volumeData->getRawData());
 
+
     // view entropy:
     // - visual probabilities
     //
@@ -979,7 +980,7 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
     // - alpha values
 
     // Debugging output
-    for (size_t z = 0; z < volumeDim[2]; ++z)
+    /*for (size_t z = 0; z < volumeDim[2]; ++z)
     for (size_t y = 0; y < volumeDim[1]; ++y)
     for (size_t x = 0; x < volumeDim[0]; ++x)
     {
@@ -991,6 +992,15 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
             rawData[x + y * volumeDim[0] + z * volumeDim[0] * volumeDim[1]],
             visibility[z][y][x],
             alpha[z][y][x]);
+    }*/
+    for (size_t idx = 0; idx < 256; ++idx)
+    {
+        std::printf("Bin %zu: %.4f, %.4f, %.u\n",
+                idx,
+                std::get<0>(m_histogramBins[idx]),
+                std::get<1>(m_histogramBins[idx]),
+                std::get<2>(m_histogramBins[idx]));
+
     }
     return viewEntropy;
 }
