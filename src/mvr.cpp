@@ -564,7 +564,7 @@ int mvr::Renderer::saveTransferFunctionToFile(std::string path)
             m_transferFunction.getDiscretized(m_xLimitsMin, m_xLimitsMax, 256);
     std::ofstream out(path);
 
-    out << "index, red, green, blue, alpha" << std::endl;
+    out << "index,red,green,blue,alpha" << std::endl;
     for (auto it = discreteTf.cbegin(); it != discreteTf.cend(); ++it)
     {
         out << it - discreteTf.cbegin() << "," <<
@@ -949,59 +949,93 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility(
 
 double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
 {
-    double viewEntropy = 0.0;
-
     std::array<size_t, 3> volumeDim =
         m_volumeData->getVolumeConfig().getVolumeDim();
+    size_t numVoxels = volumeDim[0] * volumeDim[1] * volumeDim[2];
 
-    std::cout << "Calculating visibility information..." << std::endl;
+    // get opacity, visibility and bin counts
     boost::multi_array<float, 3> alpha(
         boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
     boost::multi_array<float, 3> visibility =
         calcVisibility(cameraPosition, alpha.data());
-
-    std::cout << "Calculating noteworthiness factor..." << std::endl;
     util::tf::discreteTf1D_t tf =
         m_transferFunction.getDiscretized(0.f, 255.f, 256);
+
+    // Calculate view entropy
     uint8_t *rawData = static_cast<uint8_t*>(m_volumeData->getRawData());
+    double sigma = 0.0;
+    for (size_t z = 0; z < volumeDim[2]; ++z)
+    for (size_t y = 0; y < volumeDim[1]; ++y)
+    for (size_t x = 0; x < volumeDim[0]; ++x)
+    {
+        uint8_t voxelValue =
+            rawData[x + y * volumeDim[0] + z * volumeDim[0] * volumeDim[1]];
+        float voxelAlpha = alpha[z][y][x];
+        float voxelVisibility = visibility[z][y][x];
+        double voxelProbability =
+            static_cast<double>(std::get<2>(m_histogramBins[voxelValue])) /
+            static_cast<double>(numVoxels);
+        double voxelNoteworthiness =
+            static_cast<double>(voxelAlpha) * -std::log2(voxelProbability);
 
+        sigma += voxelVisibility / voxelNoteworthiness;
+    }
 
-    // view entropy:
-    // - visual probabilities
-    //
-    // visual probabilities:
-    // - sigma (normalization factor from summing up visibility over
-    //   noteworthines factors)
-    // - visibilities
-    // - noteworthiness
-    //
-    // noteworthiness:
-    // - bin frequencies
-    // - alpha values
+    double viewEntropy = 0.0;
+    for (size_t z = 0; z < volumeDim[2]; ++z)
+    for (size_t y = 0; y < volumeDim[1]; ++y)
+    for (size_t x = 0; x < volumeDim[0]; ++x)
+    {
+        uint8_t voxelValue =
+            rawData[x + y * volumeDim[0] + z * volumeDim[0] * volumeDim[1]];
+        float voxelAlpha = alpha[z][y][x];
+        float voxelVisibility = visibility[z][y][x];
+        double voxelProbability =
+            static_cast<double>(std::get<2>(m_histogramBins[voxelValue])) /
+            static_cast<double>(numVoxels);
+        double voxelNoteworthiness =
+            static_cast<double>(voxelAlpha) * -std::log2(voxelProbability);
 
-    // Debugging output
+        viewEntropy +=
+            -1.0 * (1.0 / sigma) * (voxelVisibility / voxelNoteworthiness);
+    }
+
+    // Debug output
     /*for (size_t z = 0; z < volumeDim[2]; ++z)
     for (size_t y = 0; y < volumeDim[1]; ++y)
     for (size_t x = 0; x < volumeDim[0]; ++x)
     {
+        uint8_t voxelValue =
+            rawData[x + y * volumeDim[0] + z * volumeDim[0] * volumeDim[1]];
+        float voxelAlpha = alpha[z][y][x];
+        float voxelVisibility = visibility[z][y][x];
+        double voxelProbability =
+            static_cast<double>(std::get<2>(m_histogramBins[voxelValue])) /
+            static_cast<double>(numVoxels);
+        double voxelNoteworthiness =
+            static_cast<double>(voxelAlpha) * -std::log2(voxelProbability);
+
+        sigma += voxelVisibility / voxelNoteworthiness;
         std::printf(
             "(%zu, %zu, %zu): value=%hhu, visibility=%.4f, alpha=%.4f\n",
             x,
             y,
             z,
-            rawData[x + y * volumeDim[0] + z * volumeDim[0] * volumeDim[1]],
-            visibility[z][y][x],
-            alpha[z][y][x]);
-    }*/
+            voxelValue,
+            voxelVisibility,
+            voxelAlpha);
+
+    }
     for (size_t idx = 0; idx < 256; ++idx)
     {
-        std::printf("Bin %zu: %.4f, %.4f, %.u\n",
+        std::printf("Bin %zu: %.4f, %.4f, %.zu\n",
                 idx,
                 std::get<0>(m_histogramBins[idx]),
                 std::get<1>(m_histogramBins[idx]),
                 std::get<2>(m_histogramBins[idx]));
 
-    }
+    }*/
+
     return viewEntropy;
 }
 

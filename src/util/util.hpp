@@ -83,7 +83,7 @@ namespace util
 
     };
 
-    using bin_t = std::tuple<double, double, unsigned int>;
+    using bin_t = std::tuple<double, double, size_t>;
     //-------------------------------------------------------------------------
     // Templated functions
     //-------------------------------------------------------------------------
