@@ -910,6 +910,7 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility(
     m_shaderVisibility.setFloat(
         "stepSize", voxelDiagonalModelSpace * m_stepSize);
     m_shaderVisibility.setFloat("voxelDiagonal", voxelDiagonalModelSpace);
+    std::cout << "voxelDiagonal: " << voxelDiagonalModelSpace << std::endl;
     m_shaderVisibility.setFloat("stepSizeVoxel", m_stepSize);
     m_shaderVisibility.setBool(
         "outputAlpha", (alphaData != nullptr) ? true : false);
@@ -968,9 +969,11 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
     for (size_t y = 0; y < volumeDim[1]; ++y)
     for (size_t x = 0; x < volumeDim[0]; ++x)
     {
+        float voxelAlpha = alpha[z][y][x];
+        if (voxelAlpha <= 0.00001f)
+            continue;
         uint8_t voxelValue =
             rawData[x + y * volumeDim[0] + z * volumeDim[0] * volumeDim[1]];
-        float voxelAlpha = alpha[z][y][x];
         float voxelVisibility = visibility[z][y][x];
         double voxelProbability =
             static_cast<double>(std::get<2>(m_histogramBins[voxelValue])) /
@@ -986,9 +989,11 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
     for (size_t y = 0; y < volumeDim[1]; ++y)
     for (size_t x = 0; x < volumeDim[0]; ++x)
     {
+        float voxelAlpha = alpha[z][y][x];
+        if (voxelAlpha <= 0.00001f)
+            continue;
         uint8_t voxelValue =
             rawData[x + y * volumeDim[0] + z * volumeDim[0] * volumeDim[1]];
-        float voxelAlpha = alpha[z][y][x];
         float voxelVisibility = visibility[z][y][x];
         double voxelProbability =
             static_cast<double>(std::get<2>(m_histogramBins[voxelValue])) /
@@ -996,8 +1001,30 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
         double voxelNoteworthiness =
             static_cast<double>(voxelAlpha) * -std::log2(voxelProbability);
 
-        viewEntropy +=
-            -1.0 * (1.0 / sigma) * (voxelVisibility / voxelNoteworthiness);
+        double visualProbability =
+            (1.0 / sigma) * (voxelVisibility / voxelNoteworthiness);
+
+        double hInc = 0.0;
+        if (!(visualProbability <= 0.00000000001))
+        {
+            hInc = -1.0 * visualProbability * std::log2(visualProbability);
+            viewEntropy += hInc;
+        }
+
+        std::printf(
+            "(%zu, %zu, %zu): value=%hhu, visibility=%.6f, alpha=%.6f, "
+            "probability=%.6f, noteworthiness=%.6f, visualProb=%.6f, "
+            "Hinc=%.6f\n",
+            x,
+            y,
+            z,
+            voxelValue,
+            voxelVisibility,
+            voxelAlpha,
+            voxelProbability,
+            voxelNoteworthiness,
+            visualProbability,
+            hInc);
     }
 
     // Debug output

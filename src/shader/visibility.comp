@@ -88,7 +88,7 @@ void main()
         alpha[idx] = tfColor.a;
     }
 
-    pos += 0.5f * voxelDiagonal * rayDir;
+    pos += 0.6f * voxelDiagonal * rayDir;
     while ( (pos.x >= bbMin.x) && (pos.y >= bbMin.y) && (pos.z >= bbMin.z) &&
             (pos.x <= bbMax.x) && (pos.y <= bbMax.y) && (pos.z <= bbMax.z) )
     {
@@ -115,6 +115,8 @@ void main()
 
     visibility[idx] = 1.f - opacity;
 
+    //visibility[idx] = rayDir.x;
+    //alpha[idx] = rayDir.y;
     // for debugging purposes
     //visibility[idx] = voxelPos.y;
     //visibility[idx] = rayDir.x;
