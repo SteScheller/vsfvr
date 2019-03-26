@@ -10,6 +10,7 @@ namespace po = boost::program_options;
 using json = nlohmann::json;
 
 #include "mvr.hpp"
+#include "progbar/progbar.hpp"
 
 //-----------------------------------------------------------------------------
 // function prototypes
@@ -20,7 +21,8 @@ int applyProgramOptions(
     mvr::Renderer &renderer,
     std::string& output,
     std::string& viewpoints,
-    std::string& outputEntropies);
+    std::string& outputEntropies,
+    double k);
 
 std::vector<std::array<float, 3>> getViewpointsFromFile(
     const std::string &file);
@@ -40,6 +42,7 @@ int main(int argc, char *argv[])
     std::string output = "";
     std::string outputEntropies = "";
     std::string viewpointsFile = "";
+    double k = 0.9;
 
     ret = renderer.initialize();
     if (EXIT_SUCCESS != ret)
@@ -49,7 +52,7 @@ int main(int argc, char *argv[])
     }
 
     ret = applyProgramOptions(
-        argc, argv, renderer, output, viewpointsFile, outputEntropies);
+        argc, argv, renderer, output, viewpointsFile, outputEntropies, k);
     if (EXIT_SUCCESS != ret)
     {
         std::cout <<
@@ -64,11 +67,19 @@ int main(int argc, char *argv[])
             getViewpointsFromFile(viewpointsFile);
 
         // Calc viewpoints entropies
+        util::ProgressBar progbar(50, viewpoints.size());
         std::vector<double> entropies(viewpoints.size(), 0.0);
         for (size_t i = 0; i < viewpoints.size(); ++i)
         {
-            entropies[i] = renderer.calcTimeseriesViewEntropy(viewpoints[i]);
+            progbar.print();
+            std::cout.flush();
+
+            entropies[i] = renderer.calcTimeseriesViewEntropy(
+                viewpoints[i], k);
+            ++progbar;
         }
+        ++progbar;
+        progbar.print();
 
         if ("" != outputEntropies)
         {
@@ -107,7 +118,8 @@ int applyProgramOptions(
         mvr::Renderer& renderer,
         std::string& output,
         std::string& viewpoints,
-        std::string& outputEntropies)
+        std::string& outputEntropies,
+        double &k)
 {
     // Declare the supported options
     po::options_description desc("Allowed options");
@@ -119,6 +131,8 @@ int applyProgramOptions(
          "json file with viewpoints which shall be evaluated")
         ("entropies,e", po::value<std::string>(),
          "output file where the viewpoint entropies are written to")
+        ("kfactor,k", po::value<double>(),
+         "weighting factor for noteworthiness calculation")
         ("output-file,o", po::value<std::string>(), "batch mode output file")
     ;
 
@@ -167,6 +181,9 @@ int applyProgramOptions(
 
         if (vm.count("entropies"))
             outputEntropies = vm["entropies"].as<std::string>();
+
+        if (vm.count("kfactor"))
+            k = vm["kfactor"].as<double>();
     }
     catch(std::exception &e)
     {
