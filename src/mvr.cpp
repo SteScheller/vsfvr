@@ -1630,7 +1630,8 @@ void mvr::Renderer::drawSettingsWindow()
         }
         if(ImGui::Button("calc time-series view entropy"))
         {
-            double viewEntropy = calcTimeseriesViewEntropy(m_cameraPosition);
+            double viewEntropy =
+                calcTimeseriesViewEntropy(m_cameraPosition, 0.9);
             std::cout <<
                 "time-series view entropy: " << viewEntropy << std::endl;
         }

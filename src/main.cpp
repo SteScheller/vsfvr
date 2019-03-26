@@ -22,7 +22,7 @@ int applyProgramOptions(
     std::string& output,
     std::string& viewpoints,
     std::string& outputEntropies,
-    double k);
+    double& k);
 
 std::vector<std::array<float, 3>> getViewpointsFromFile(
     const std::string &file);
@@ -40,8 +40,8 @@ int main(int argc, char *argv[])
     int ret = EXIT_SUCCESS;
     mvr::Renderer renderer;
     std::string output = "";
-    std::string outputEntropies = "";
     std::string viewpointsFile = "";
+    std::string outputEntropies = "";
     double k = 0.9;
 
     ret = renderer.initialize();
@@ -119,7 +119,7 @@ int applyProgramOptions(
         std::string& output,
         std::string& viewpoints,
         std::string& outputEntropies,
-        double &k)
+        double& k)
 {
     // Declare the supported options
     po::options_description desc("Allowed options");
