@@ -2,6 +2,7 @@
 #include <vector>
 #include <array>
 #include <fstream>
+#include <cstdio>
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
@@ -24,7 +25,7 @@ int applyProgramOptions(
     std::string& outputEntropies,
     double& k);
 
-std::vector<std::array<float, 3>> getViewpointsFromFile(
+std::vector<std::array<float, 3>> loadViewpointsFromFile(
     const std::string &file);
 
 void writeEntropiesToFile(
@@ -64,7 +65,7 @@ int main(int argc, char *argv[])
     {
         // Read camera position from json file
         std::vector<std::array<float, 3>> viewpoints =
-            getViewpointsFromFile(viewpointsFile);
+            loadViewpointsFromFile(viewpointsFile);
 
         // Calc viewpoints entropies
         util::ProgressBar progbar(50, viewpoints.size());
@@ -76,6 +77,12 @@ int main(int argc, char *argv[])
 
             entropies[i] = renderer.calcTimeseriesViewEntropy(
                 viewpoints[i], k);
+            std::printf(
+                "viewpoint: (%.3f, %.3f, %.3f) -- viewpoint entropy: %.6f\n",
+                (viewpoints[i])[0],
+                (viewpoints[i])[1],
+                (viewpoints[i])[2],
+                entropies[i]);
             ++progbar;
         }
         ++progbar;
@@ -85,6 +92,7 @@ int main(int argc, char *argv[])
         {
             // write the results to a csv file
             writeEntropiesToFile(outputEntropies, viewpoints, entropies);
+            std::cout << "Stored entropies in " << outputEntropies << std::endl;
         }
     }
 
@@ -194,7 +202,7 @@ int applyProgramOptions(
     return ret;
 }
 
-std::vector<std::array<float, 3>> getViewpointsFromFile(
+std::vector<std::array<float, 3>> loadViewpointsFromFile(
     const std::string &file)
 {
     std::vector<std::array<float, 3>> viewpoints;
@@ -237,7 +245,6 @@ void writeEntropiesToFile(
     std::ofstream out(path);
 
     out << "index,camX,camY,camZ,viewpointEntropy" << std::endl;
-    out << "index,red,green,blue,alpha" << std::endl;
     for (size_t i = 0; i < entropies.size(); ++i)
     {
         out << i << "," <<

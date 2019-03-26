@@ -910,7 +910,6 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility(
     m_shaderVisibility.setFloat(
         "stepSize", voxelDiagonalModelSpace * m_stepSize);
     m_shaderVisibility.setFloat("voxelDiagonal", voxelDiagonalModelSpace);
-    std::cout << "voxelDiagonal: " << voxelDiagonalModelSpace << std::endl;
     m_shaderVisibility.setFloat("stepSizeVoxel", m_stepSize);
     m_shaderVisibility.setBool(
         "outputAlpha", (alphaData != nullptr) ? true : false);
@@ -1011,7 +1010,6 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
             viewEntropy += hInc;
         }
 
-
         // for debugging purposes
         /*std::printf(
             "(%zu, %zu, %zu): value=%hhu, visibility=%.6f, alpha=%.6f, "
@@ -1028,17 +1026,6 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
             visualProbability,
             hInc);*/
     }
-
-    // Debug output
-    /*for (size_t idx = 0; idx < 256; ++idx)
-    {
-        std::printf("Bin %zu: %.4f, %.4f, %.zu\n",
-                idx,
-                std::get<0>(m_histogramBins[idx]),
-                std::get<1>(m_histogramBins[idx]),
-                std::get<2>(m_histogramBins[idx]));
-
-    }*/
 
     return viewEntropy;
 }
