@@ -259,9 +259,10 @@ namespace mvr
         //---------------------------------------------------------------------
         public:
         double calcTimestepViewEntropy(glm::vec3 cameraPosition);
-        double calcTimeseriesViewEntropy(std::array<float, 3> cameraPosition);
-        double calcTimeseriesViewEntropy(float x, float y, float z);
-        double calcTimeseriesViewEntropy(glm::vec3 cameraPosition);
+        double calcTimeseriesViewEntropy(
+            std::array<float, 3> cameraPosition, double k);
+        double calcTimeseriesViewEntropy(float x, float y, float z, double k);
+        double calcTimeseriesViewEntropy(glm::vec3 cameraPosition, double k);
 
         private:
         int initializeVsfvr();

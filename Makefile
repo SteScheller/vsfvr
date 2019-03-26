@@ -4,6 +4,7 @@ TARGET = vsfvr
 BUILD_DIR = build
 
 SOURCES = src/main.cpp src/mvr.cpp
+SOURCES += src/progbar/progbar.cpp
 SOURCES += src/util/util.cpp src/util/texture.cpp src/util/geometry.cpp
 SOURCES += src/configraw.cpp src/util/transferfunc.cpp
 SOURCES += libs/imgui/imgui_impl_glfw.cpp libs/imgui/imgui_impl_opengl3.cpp

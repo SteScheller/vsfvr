@@ -1044,41 +1044,117 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
 }
 
 double mvr::Renderer::calcTimeseriesViewEntropy(
-    std::array<float, 3> cameraPosition)
+    std::array<float, 3> cameraPosition, double k)
 {
     glm::vec3 camPos(cameraPosition[0], cameraPosition[1], cameraPosition[2]);
-    return calcTimeseriesViewEntropy(camPos);
+    return calcTimeseriesViewEntropy(camPos, k);
 }
-double mvr::Renderer::calcTimeseriesViewEntropy(float x, float y, float z)
+double mvr::Renderer::calcTimeseriesViewEntropy(
+    float x, float y, float z, double k)
 {
     glm::vec3 camPos(x, y, z);
-    return calcTimeseriesViewEntropy(camPos);
+    return calcTimeseriesViewEntropy(camPos, k);
 }
-double mvr::Renderer::calcTimeseriesViewEntropy(glm::vec3 cameraPosition)
+double mvr::Renderer::calcTimeseriesViewEntropy(
+    glm::vec3 cameraPosition, double k)
 {
-    double viewEntropy = 0.0;
+    // volume metadata
+    std::array<size_t, 3> volumeDim =
+        m_volumeData->getVolumeConfig().getVolumeDim();
+    size_t numVoxels = volumeDim[0] * volumeDim[1] * volumeDim[2];
+    size_t numTimesteps = m_volumeData->getVolumeConfig().getNumTimesteps();
 
-    std::cout << "Calculating visibility information..." << std::endl;
-    boost::multi_array<float, 3> visibility = calcVisibility(cameraPosition);
+    // prepare buffers and get transfer function data
+    boost::multi_array<float, 3> alphaOld(
+        boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
+    boost::multi_array<float, 3> alpha(
+        boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
+    boost::multi_array<float, 3> visibility(
+        boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
+    boost::multi_array<uint8_t, 3> dataOld(
+        boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
+    util::tf::discreteTf1D_t tf =
+        m_transferFunction.getDiscretized(0.f, 255.f, 256);
 
-    // view entropy:
-    // - visual probabilities
-    //
-    // visual probabilities:
-    // - sigma (normalization factor from summing up visibility over
-    //   noteworthines factors)
-    // - visibilities
-    // - noteworthiness
-    //
-    // noteworthiness:
-    // - bin frequencies
-    // - alpha values
-    //
-    // change for time-series view assessment:
-    // - entropies change to conditional entropies which are based
-    //   on -> conditional visual probabilites -> conditional
-    //   noteworthiness -> new alpha factors
-    // - conditional noteworthiness changes from
+    // entropy increment for t=0 is equal to static volume viewpoint entropy
+    loadVolume(m_volumeData->getVolumeConfig(), 0);
+    double viewEntropy = calcTimestepViewEntropy(cameraPosition);
+    visibility = calcVisibility(cameraPosition, alphaOld.data());
+
+    // calculate entropy values for the remaining timesteps
+    for (size_t i = 1; i < numTimesteps; ++i)
+    {
+        // Load the data of the current timestep
+        loadVolume(m_volumeData->getVolumeConfig(), i);
+        uint8_t *rawData = static_cast<uint8_t*>(m_volumeData->getRawData());
+
+        // Calculate the entropy value for the current timestep
+        double sigma = 0.0;
+        visibility = calcVisibility(cameraPosition, alpha.data());
+        for (size_t z = 0; z < volumeDim[2]; ++z)
+        for (size_t y = 0; y < volumeDim[1]; ++y)
+        for (size_t x = 0; x < volumeDim[0]; ++x)
+        {
+            float voxelAlphaOld = alphaOld[z][y][x];
+            float voxelAlpha = alpha[z][y][x];
+            if (voxelAlpha <= 0.00001f)
+                continue;
+            uint8_t voxelValue = rawData[
+                    x + y * volumeDim[0] + z * volumeDim[0] * volumeDim[1]];
+            float voxelVisibility = visibility[z][y][x];
+            double voxelProbability =
+                static_cast<double>(std::get<2>(m_histogramBins[voxelValue])) /
+                static_cast<double>(numVoxels);
+            double voxelNoteworthiness =
+                (k * std::fabs(voxelAlpha - voxelAlphaOld) +
+                    (1.0 - k) * voxelAlpha) *
+                -std::log2(voxelProbability);
+
+            sigma += voxelVisibility / voxelNoteworthiness;
+        }
+
+        double hTimestep = 0.0;
+        for (size_t z = 0; z < volumeDim[2]; ++z)
+        for (size_t y = 0; y < volumeDim[1]; ++y)
+        for (size_t x = 0; x < volumeDim[0]; ++x)
+        {
+            float voxelAlphaOld = alphaOld[z][y][x];
+            float voxelAlpha = alpha[z][y][x];
+            if (voxelAlpha <= 0.00001f)
+                continue;
+            uint8_t voxelValue = rawData[
+                    x + y * volumeDim[0] + z * volumeDim[0] * volumeDim[1]];
+            float voxelVisibility = visibility[z][y][x];
+            double voxelProbability =
+                static_cast<double>(std::get<2>(m_histogramBins[voxelValue])) /
+                static_cast<double>(numVoxels);
+            double voxelNoteworthiness =
+                (k * std::fabs(voxelAlpha - voxelAlphaOld) +
+                    (1.0 - k) * voxelAlpha) *
+                -std::log2(voxelProbability);
+
+            double visualProbability =
+                (1.0 / sigma) * (voxelVisibility / voxelNoteworthiness);
+
+            double hInc = 0.0;
+            if (!(visualProbability <= 0.00000000001))
+            {
+                hInc = -1.0 * visualProbability * std::log2(visualProbability);
+                hTimestep += hInc;
+            }
+        }
+
+        // Add entropy of current timestep
+        viewEntropy += hTimestep;
+
+        // Copy the opacity data of the current timestep for the next
+        // noteworthiness calculation
+        if ((i + 1) < numTimesteps)
+            std::memcpy(
+                alphaOld.data(),
+                alpha.data(),
+                sizeof(float) * alpha.num_elements());
+    }
 
     return viewEntropy;
 }
