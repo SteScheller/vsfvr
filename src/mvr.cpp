@@ -1011,7 +1011,9 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
             viewEntropy += hInc;
         }
 
-        std::printf(
+
+        // for debugging purposes
+        /*std::printf(
             "(%zu, %zu, %zu): value=%hhu, visibility=%.6f, alpha=%.6f, "
             "probability=%.6f, noteworthiness=%.6f, visualProb=%.6f, "
             "Hinc=%.6f\n",
@@ -1024,36 +1026,11 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
             voxelProbability,
             voxelNoteworthiness,
             visualProbability,
-            hInc);
+            hInc);*/
     }
 
     // Debug output
-    /*for (size_t z = 0; z < volumeDim[2]; ++z)
-    for (size_t y = 0; y < volumeDim[1]; ++y)
-    for (size_t x = 0; x < volumeDim[0]; ++x)
-    {
-        uint8_t voxelValue =
-            rawData[x + y * volumeDim[0] + z * volumeDim[0] * volumeDim[1]];
-        float voxelAlpha = alpha[z][y][x];
-        float voxelVisibility = visibility[z][y][x];
-        double voxelProbability =
-            static_cast<double>(std::get<2>(m_histogramBins[voxelValue])) /
-            static_cast<double>(numVoxels);
-        double voxelNoteworthiness =
-            static_cast<double>(voxelAlpha) * -std::log2(voxelProbability);
-
-        sigma += voxelVisibility / voxelNoteworthiness;
-        std::printf(
-            "(%zu, %zu, %zu): value=%hhu, visibility=%.4f, alpha=%.4f\n",
-            x,
-            y,
-            z,
-            voxelValue,
-            voxelVisibility,
-            voxelAlpha);
-
-    }
-    for (size_t idx = 0; idx < 256; ++idx)
+    /*for (size_t idx = 0; idx < 256; ++idx)
     {
         std::printf("Bin %zu: %.4f, %.4f, %.zu\n",
                 idx,
@@ -1066,6 +1043,17 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
     return viewEntropy;
 }
 
+double mvr::Renderer::calcTimeseriesViewEntropy(
+    std::array<float, 3> cameraPosition)
+{
+    glm::vec3 camPos(cameraPosition[0], cameraPosition[1], cameraPosition[2]);
+    return calcTimeseriesViewEntropy(camPos);
+}
+double mvr::Renderer::calcTimeseriesViewEntropy(float x, float y, float z)
+{
+    glm::vec3 camPos(x, y, z);
+    return calcTimeseriesViewEntropy(camPos);
+}
 double mvr::Renderer::calcTimeseriesViewEntropy(glm::vec3 cameraPosition)
 {
     double viewEntropy = 0.0;

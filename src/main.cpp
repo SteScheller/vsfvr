@@ -1,7 +1,13 @@
 #include <iostream>
+#include <vector>
+#include <array>
+#include <fstream>
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
+
+#include <json.hpp>
+using json = nlohmann::json;
 
 #include "mvr.hpp"
 
@@ -12,7 +18,17 @@ int applyProgramOptions(
     int argc,
     char *argv[],
     mvr::Renderer &renderer,
-    std::string &output);
+    std::string& output,
+    std::string& viewpoints,
+    std::string& outputEntropies);
+
+std::vector<std::array<float, 3>> getViewpointsFromFile(
+    const std::string &file);
+
+void writeEntropiesToFile(
+        const std::string &path,
+        const std::vector<std::array<float,3>> &viewpoints,
+        const std::vector<double> &entropies);
 
 //-----------------------------------------------------------------------------
 // main program
@@ -22,6 +38,8 @@ int main(int argc, char *argv[])
     int ret = EXIT_SUCCESS;
     mvr::Renderer renderer;
     std::string output = "";
+    std::string outputEntropies = "";
+    std::string viewpointsFile = "";
 
     ret = renderer.initialize();
     if (EXIT_SUCCESS != ret)
@@ -30,12 +48,33 @@ int main(int argc, char *argv[])
         return ret;
     }
 
-    ret = applyProgramOptions(argc, argv, renderer, output);
+    ret = applyProgramOptions(
+        argc, argv, renderer, output, viewpointsFile, outputEntropies);
     if (EXIT_SUCCESS != ret)
     {
         std::cout <<
             "Error: failed to apply command line arguments." << std::endl;
         return ret;
+    }
+
+    if ("" != viewpointsFile)
+    {
+        // Read camera position from json file
+        std::vector<std::array<float, 3>> viewpoints =
+            getViewpointsFromFile(viewpointsFile);
+
+        // Calc viewpoints entropies
+        std::vector<double> entropies(viewpoints.size(), 0.0);
+        for (size_t i = 0; i < viewpoints.size(); ++i)
+        {
+            entropies[i] = renderer.calcTimeseriesViewEntropy(viewpoints[i]);
+        }
+
+        if ("" != outputEntropies)
+        {
+            // write the results to a csv file
+            writeEntropiesToFile(outputEntropies, viewpoints, entropies);
+        }
     }
 
     if ("" == output)
@@ -66,7 +105,9 @@ int applyProgramOptions(
         int argc,
         char *argv[],
         mvr::Renderer& renderer,
-        std::string& output)
+        std::string& output,
+        std::string& viewpoints,
+        std::string& outputEntropies)
 {
     // Declare the supported options
     po::options_description desc("Allowed options");
@@ -74,6 +115,10 @@ int applyProgramOptions(
         ("help,h", "produce help message")
         ("volume,v", po::value<std::string>(), "volume description file")
         ("config,c", po::value<std::string>(), "renderer configuration file")
+        ("viewpoints,p", po::value<std::string>(),
+         "json file with viewpoints which shall be evaluated")
+        ("entropies,e", po::value<std::string>(),
+         "output file where the viewpoint entropies are written to")
         ("output-file,o", po::value<std::string>(), "batch mode output file")
     ;
 
@@ -117,6 +162,11 @@ int applyProgramOptions(
         if (vm.count("output-file"))
             output = vm["output-file"].as<std::string>();
 
+        if (vm.count("viewpoints"))
+            viewpoints = vm["viewpoints"].as<std::string>();
+
+        if (vm.count("entropies"))
+            outputEntropies = vm["entropies"].as<std::string>();
     }
     catch(std::exception &e)
     {
@@ -125,5 +175,61 @@ int applyProgramOptions(
     }
 
     return ret;
+}
+
+std::vector<std::array<float, 3>> getViewpointsFromFile(
+    const std::string &file)
+{
+    std::vector<std::array<float, 3>> viewpoints;
+    std::ifstream fs;
+
+    fs.open(file.c_str(), std::ofstream::in);
+    try
+    {
+        json conf;
+        fs >> conf;
+
+        // read list of viewpoints/ camera positions from json file
+        if (!conf["viewpoints"].is_null())
+        {
+            for (
+                json::const_iterator it = conf["viewpoints"].cbegin();
+                it != conf["viewpoints"].cend();
+                ++it)
+            {
+                viewpoints.emplace_back((*it).get<std::array<float, 3>>());
+            }
+        }
+
+    }
+    catch(std::exception &e)
+    {
+        std::cout << "Error loading viewpoints from file: " <<
+            file << std::endl;
+        std::cout << "General exception: " << e.what() << std::endl;
+    }
+
+    return viewpoints;
+}
+
+void writeEntropiesToFile(
+        const std::string &path,
+        const std::vector<std::array<float,3>> &viewpoints,
+        const std::vector<double> &entropies)
+{
+    std::ofstream out(path);
+
+    out << "index,camX,camY,camZ,viewpointEntropy" << std::endl;
+    out << "index,red,green,blue,alpha" << std::endl;
+    for (size_t i = 0; i < entropies.size(); ++i)
+    {
+        out << i << "," <<
+           (viewpoints[i])[0] << "," <<
+           (viewpoints[i])[1] << "," <<
+           (viewpoints[i])[2] << "," <<
+           entropies[i] << std::endl;
+    }
+
+    out.close();
 }
 

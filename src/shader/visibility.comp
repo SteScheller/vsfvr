@@ -88,7 +88,7 @@ void main()
         alpha[idx] = tfColor.a;
     }
 
-    pos += 0.51f * voxelDiagonal * rayDir;
+    pos += 0.7f * voxelDiagonal * rayDir;
     while ( (pos.x >= bbMin.x) && (pos.y >= bbMin.y) && (pos.z >= bbMin.z) &&
             (pos.x <= bbMax.x) && (pos.y <= bbMax.y) && (pos.z <= bbMax.z) )
     {

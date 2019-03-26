@@ -110,7 +110,13 @@ namespace mvr
         int saveTransferFunctionToFile(std::string path);
         int loadVolumeFromFile(std::string path, unsigned int timestep = 0);
 
-       //---------------------------------------------------------------------
+        void setCameraPosition(glm::vec3 camPos){ m_cameraPosition = camPos; }
+        void setCameraPosition(float x, float y, float z)
+        {
+            m_cameraPosition = glm::vec3(x, y, z);
+        }
+
+        //---------------------------------------------------------------------
         // class-wide constants and default values
         //---------------------------------------------------------------------
         static constexpr int REQUIRED_OGL_VERSION_MAJOR = 4;
@@ -251,9 +257,14 @@ namespace mvr
         //---------------------------------------------------------------------
         // VSFVR Extension
         //---------------------------------------------------------------------
-        int initializeVsfvr();
+        public:
         double calcTimestepViewEntropy(glm::vec3 cameraPosition);
+        double calcTimeseriesViewEntropy(std::array<float, 3> cameraPosition);
+        double calcTimeseriesViewEntropy(float x, float y, float z);
         double calcTimeseriesViewEntropy(glm::vec3 cameraPosition);
+
+        private:
+        int initializeVsfvr();
         boost::multi_array<float, 3> calcVisibility(
                 glm::vec3 cameraPosition,
                 float *alphaData = nullptr);
