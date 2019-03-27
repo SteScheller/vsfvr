@@ -945,6 +945,10 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility(
             alphaData, ssboPtr, sizeof(float) * visibility.num_elements());
         glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
     }
+
+    glDeleteBuffers(1, &visibilitySsbo);
+    if (alphaData != nullptr) glDeleteBuffers(1, &alphaSsbo);
+
     return visibility;
 }
 
