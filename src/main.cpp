@@ -72,7 +72,9 @@ int main(int argc, char *argv[])
         std::vector<double> entropies(viewpoints.size(), 0.0);
         for (size_t i = 0; i < viewpoints.size(); ++i)
         {
+            std::cout << "Overall progress: ";
             progbar.print();
+            std::cout << std::endl;
             std::cout.flush();
 
             entropies[i] = renderer.calcTimeseriesViewEntropy(
@@ -86,7 +88,9 @@ int main(int argc, char *argv[])
             ++progbar;
         }
         ++progbar;
+        std::cout << "Overall progress: ";
         progbar.print();
+        std::cout << std::endl;
 
         if ("" != outputEntropies)
         {

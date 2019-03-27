@@ -37,6 +37,7 @@ using json = nlohmann::json;
 #include "shader.hpp"
 #include "util/util.hpp"
 #include "configraw.hpp"
+#include "progbar/progbar.hpp"
 
 //-----------------------------------------------------------------------------
 // definition of static member variables
@@ -855,7 +856,7 @@ boost::multi_array<float, 3> mvr::Renderer::calcVisibility(
     std::array<size_t, 3> volumeDim =
         m_volumeData->getVolumeConfig().getVolumeDim();
     boost::multi_array<float, 3> visibility(
-        boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
+        boost::extents[volumeDim[2]][volumeDim[1]][volumeDim[0]]);
     std::fill_n(visibility.data(), visibility.num_elements(), 0.f);
 
     // create shader storage buffers and initialize them
@@ -955,7 +956,7 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
 
     // get opacity, visibility and bin counts
     boost::multi_array<float, 3> alpha(
-        boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
+        boost::extents[volumeDim[2]][volumeDim[1]][volumeDim[0]]);
     boost::multi_array<float, 3> visibility =
         calcVisibility(cameraPosition, alpha.data());
     util::tf::discreteTf1D_t tf =
@@ -964,6 +965,8 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
     // Calculate view entropy
     uint8_t *rawData = static_cast<uint8_t*>(m_volumeData->getRawData());
     double sigma = 0.0;
+
+    #pragma omp parallel for reduction(+: sigma)
     for (size_t z = 0; z < volumeDim[2]; ++z)
     for (size_t y = 0; y < volumeDim[1]; ++y)
     for (size_t x = 0; x < volumeDim[0]; ++x)
@@ -984,6 +987,7 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
     }
 
     double viewEntropy = 0.0;
+    #pragma omp parallel for reduction(+: viewEntropy)
     for (size_t z = 0; z < volumeDim[2]; ++z)
     for (size_t y = 0; y < volumeDim[1]; ++y)
     for (size_t x = 0; x < volumeDim[0]; ++x)
@@ -1005,10 +1009,9 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
 
         double hInc = 0.0;
         if (!(visualProbability <= 0.00000000001))
-        {
             hInc = -1.0 * visualProbability * std::log2(visualProbability);
-            viewEntropy += hInc;
-        }
+
+        viewEntropy += hInc;
 
         // for debugging purposes
         /*std::printf(
@@ -1053,24 +1056,33 @@ double mvr::Renderer::calcTimeseriesViewEntropy(
 
     // prepare buffers and get transfer function data
     boost::multi_array<float, 3> alphaOld(
-        boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
+        boost::extents[volumeDim[2]][volumeDim[1]][volumeDim[0]]);
     boost::multi_array<float, 3> alpha(
-        boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
+        boost::extents[volumeDim[2]][volumeDim[1]][volumeDim[0]]);
     boost::multi_array<float, 3> visibility(
-        boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
-    boost::multi_array<uint8_t, 3> dataOld(
-        boost::extents[volumeDim[0]][volumeDim[1]][volumeDim[2]]);
+        boost::extents[volumeDim[2]][volumeDim[1]][volumeDim[0]]);
     util::tf::discreteTf1D_t tf =
         m_transferFunction.getDiscretized(0.f, 255.f, 256);
+
+    // Print some progress output
+    util::ProgressBar progbar(50, numTimesteps);
+    std::cout << "Current viewpoint:";
+    progbar.print();
+    std::cout.flush();
 
     // entropy increment for t=0 is equal to static volume viewpoint entropy
     loadVolume(m_volumeData->getVolumeConfig(), 0);
     double viewEntropy = calcTimestepViewEntropy(cameraPosition);
     visibility = calcVisibility(cameraPosition, alphaOld.data());
+    ++progbar;
 
     // calculate entropy values for the remaining timesteps
     for (size_t i = 1; i < numTimesteps; ++i)
     {
+        std::cout << "Current viewpoint:";
+        progbar.print();
+        std::cout.flush();
+
         // Load the data of the current timestep
         loadVolume(m_volumeData->getVolumeConfig(), i);
         uint8_t *rawData = static_cast<uint8_t*>(m_volumeData->getRawData());
@@ -1078,6 +1090,8 @@ double mvr::Renderer::calcTimeseriesViewEntropy(
         // Calculate the entropy value for the current timestep
         double sigma = 0.0;
         visibility = calcVisibility(cameraPosition, alpha.data());
+
+        #pragma omp parallel for reduction(+: sigma)
         for (size_t z = 0; z < volumeDim[2]; ++z)
         for (size_t y = 0; y < volumeDim[1]; ++y)
         for (size_t x = 0; x < volumeDim[0]; ++x)
@@ -1101,6 +1115,7 @@ double mvr::Renderer::calcTimeseriesViewEntropy(
         }
 
         double hTimestep = 0.0;
+        #pragma omp parallel for reduction(+: hTimestep)
         for (size_t z = 0; z < volumeDim[2]; ++z)
         for (size_t y = 0; y < volumeDim[1]; ++y)
         for (size_t x = 0; x < volumeDim[0]; ++x)
@@ -1125,10 +1140,9 @@ double mvr::Renderer::calcTimeseriesViewEntropy(
 
             double hInc = 0.0;
             if (!(visualProbability <= 0.00000000001))
-            {
                 hInc = -1.0 * visualProbability * std::log2(visualProbability);
-                hTimestep += hInc;
-            }
+
+            hTimestep += hInc;
         }
 
         // Add entropy of current timestep
@@ -1141,7 +1155,13 @@ double mvr::Renderer::calcTimeseriesViewEntropy(
                 alphaOld.data(),
                 alpha.data(),
                 sizeof(float) * alpha.num_elements());
+        ++progbar;
     }
+
+    ++progbar;
+    std::cout << "Current viewpoint:";
+    progbar.print();
+    std::cout << std::endl;
 
     return viewEntropy;
 }

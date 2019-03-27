@@ -21,17 +21,17 @@ CC = cc
 CXX = g++
 LINKER = ld
 
-CXXFLAGS = $(INCLUDE) -std=c++14 `pkg-config --cflags glfw3`
+CXXFLAGS = $(INCLUDE) -std=c++14 -fopenmp `pkg-config --cflags glfw3`
 CXXFLAGS += -Wall -Wextra
 DEBUG_CXXFLAGS = -DDEBUG -g
 RELEASE_CXXFLAGS = -DRELEASE -O3
 
-CFLAGS = $(INCLUDE) -std=c11 `pkg-config --cflags glfw3`
+CFLAGS = $(INCLUDE) -std=c11 -fopenmp `pkg-config --cflags glfw3`
 CFLAGS += -Wall -Wextra
 DEBUG_CFLAGS = -DDEBUG -g
 RELEASE_CFLAGS = -DRELEASE -O3
 
-LDFLAGS = -lGL `pkg-config --static --libs glfw3`
+LDFLAGS = -lGL -fopenmp `pkg-config --static --libs glfw3`
 LDFLAGS += -lboost_system -lboost_filesystem -lboost_regex
 LDFLAGS += -lboost_iostreams -lboost_program_options
 LDFLAGS += -lfreeimage
