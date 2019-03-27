@@ -1161,7 +1161,6 @@ double mvr::Renderer::calcTimeseriesViewEntropy(
     ++progbar;
     std::cout << "Current viewpoint:";
     progbar.print();
-    std::cout << std::endl;
 
     return viewEntropy;
 }
