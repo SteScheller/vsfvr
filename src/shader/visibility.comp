@@ -77,7 +77,7 @@ void main()
     bool terminateEarly = false;    //!< early ray termination
 
     vec3 pos = voxelPos;
-    vec3 stepInc = rayDir * stepSize;
+    vec3 stepInc = rayDir * stepSize * voxelDiagonal;
 
     if (outputAlpha)
     {
@@ -99,6 +99,7 @@ void main()
 
         // alpha blending
         float adjustedAlpha = (1.f - pow(1.f - tfColor.a, stepSizeVoxel));
+
         opacity += (1.f - opacity) * adjustedAlpha;
 
         if (opacity > 0.999f)

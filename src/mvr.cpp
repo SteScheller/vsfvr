@@ -971,9 +971,12 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
     double sigma = 0.0;
 
     #pragma omp parallel for reduction(+: sigma)
-    for (size_t z = 0; z < volumeDim[2]; ++z)
-    for (size_t y = 0; y < volumeDim[1]; ++y)
-    for (size_t x = 0; x < volumeDim[0]; ++x)
+    //for (size_t z = 0; z < volumeDim[2]; ++z)
+    //for (size_t y = 0; y < volumeDim[1]; ++y)
+    //for (size_t x = 0; x < volumeDim[0]; ++x)
+    for (size_t z = 4; z < (volumeDim[2] - 4); ++z)
+    for (size_t y = 4; y < (volumeDim[1] - 4); ++y)
+    for (size_t x = 4; x < volumeDim[0]; ++x)
     {
         float voxelAlpha = alpha[z][y][x];
         if (voxelAlpha <= 0.00001f)
@@ -992,9 +995,12 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
 
     double viewEntropy = 0.0;
     #pragma omp parallel for reduction(+: viewEntropy)
-    for (size_t z = 0; z < volumeDim[2]; ++z)
-    for (size_t y = 0; y < volumeDim[1]; ++y)
-    for (size_t x = 0; x < volumeDim[0]; ++x)
+    //for (size_t z = 0; z < volumeDim[2]; ++z)
+    //for (size_t y = 0; y < volumeDim[1]; ++y)
+    //for (size_t x = 0; x < volumeDim[0]; ++x)
+    for (size_t z = 4; z < (volumeDim[2] - 4); ++z)
+    for (size_t y = 4; y < (volumeDim[1] - 4); ++y)
+    for (size_t x = 4; x < volumeDim[0]; ++x)
     {
         float voxelAlpha = alpha[z][y][x];
         if (voxelAlpha <= 0.00001f)
@@ -1033,6 +1039,13 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
             visualProbability,
             hInc);*/
     }
+
+    //std::cout << "Volume dim: " << volumeDim[0] << "," << volumeDim[1] << "," << volumeDim[2] << std::endl;
+    //std::cout << "Debug visibility 1: " <<  visibility[5][5][5] << std::endl;
+    //std::cout << "Debug visibility 2: " <<  visibility[90][98][90] << std::endl;
+    //std::cout << "Debug visibility 3: " <<  visibility[90][0][90] << std::endl;
+
+    if (std::isnan(viewEntropy)) viewEntropy = 0.0;
 
     return viewEntropy;
 }
@@ -1096,9 +1109,12 @@ double mvr::Renderer::calcTimeseriesViewEntropy(
         visibility = calcVisibility(cameraPosition, alpha.data());
 
         #pragma omp parallel for reduction(+: sigma)
-        for (size_t z = 0; z < volumeDim[2]; ++z)
-        for (size_t y = 0; y < volumeDim[1]; ++y)
-        for (size_t x = 0; x < volumeDim[0]; ++x)
+        //for (size_t z = 0; z < volumeDim[2]; ++z)
+        //for (size_t y = 0; y < volumeDim[1]; ++y)
+        //for (size_t x = 0; x < volumeDim[0]; ++x)
+        for (size_t z = 4; z < (volumeDim[2] - 4); ++z)
+        for (size_t y = 4; y < (volumeDim[1] - 4); ++y)
+        for (size_t x = 4; x < volumeDim[0]; ++x)
         {
             float voxelAlphaOld = alphaOld[z][y][x];
             float voxelAlpha = alpha[z][y][x];
@@ -1106,6 +1122,7 @@ double mvr::Renderer::calcTimeseriesViewEntropy(
                 continue;
             uint8_t voxelValue = rawData[
                     x + y * volumeDim[0] + z * volumeDim[0] * volumeDim[1]];
+
             float voxelVisibility = visibility[z][y][x];
             double voxelProbability =
                 static_cast<double>(std::get<2>(m_histogramBins[voxelValue])) /
@@ -1120,9 +1137,12 @@ double mvr::Renderer::calcTimeseriesViewEntropy(
 
         double hTimestep = 0.0;
         #pragma omp parallel for reduction(+: hTimestep)
-        for (size_t z = 0; z < volumeDim[2]; ++z)
-        for (size_t y = 0; y < volumeDim[1]; ++y)
-        for (size_t x = 0; x < volumeDim[0]; ++x)
+        //for (size_t z = 0; z < volumeDim[2]; ++z)
+        //for (size_t y = 0; y < volumeDim[1]; ++y)
+        //for (size_t x = 0; x < volumeDim[0]; ++x)
+        for (size_t z = 4; z < (volumeDim[2] - 4); ++z)
+        for (size_t y = 4; y < (volumeDim[1] - 4); ++y)
+        for (size_t x = 4; x < volumeDim[0]; ++x)
         {
             float voxelAlphaOld = alphaOld[z][y][x];
             float voxelAlpha = alpha[z][y][x];
@@ -1130,6 +1150,7 @@ double mvr::Renderer::calcTimeseriesViewEntropy(
                 continue;
             uint8_t voxelValue = rawData[
                     x + y * volumeDim[0] + z * volumeDim[0] * volumeDim[1]];
+
             float voxelVisibility = visibility[z][y][x];
             double voxelProbability =
                 static_cast<double>(std::get<2>(m_histogramBins[voxelValue])) /
@@ -1165,6 +1186,13 @@ double mvr::Renderer::calcTimeseriesViewEntropy(
     ++progbar;
     std::cout << "Current viewpoint:";
     progbar.print();
+
+    //std::cout << "Volume dim: " << volumeDim[0] << "," << volumeDim[1] << "," << volumeDim[2] << std::endl;
+    //std::cout << "Debug visibility 1: " <<  visibility[5][5][5] << std::endl;
+    //std::cout << "Debug visibility 2: " <<  visibility[90][98][90] << std::endl;
+    //std::cout << "Debug visibility 3: " <<  visibility[90][0][90] << std::endl;
+
+    if (std::isnan(viewEntropy)) viewEntropy = 0.0;
 
     return viewEntropy;
 }
