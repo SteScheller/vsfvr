@@ -77,7 +77,7 @@ void main()
     bool terminateEarly = false;    //!< early ray termination
 
     vec3 pos = voxelPos;
-    vec3 stepInc = rayDir * stepSize;
+    vec3 stepInc = rayDir * stepSize * voxelDiagonal;
 
     if (outputAlpha)
     {

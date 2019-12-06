@@ -1034,6 +1034,8 @@ double mvr::Renderer::calcTimestepViewEntropy(glm::vec3 cameraPosition)
             hInc);*/
     }
 
+    if (std::isnan(viewEntropy)) viewEntropy = 0.0;
+
     return viewEntropy;
 }
 
@@ -1165,6 +1167,8 @@ double mvr::Renderer::calcTimeseriesViewEntropy(
     ++progbar;
     std::cout << "Current viewpoint:";
     progbar.print();
+
+    if (std::isnan(viewEntropy)) viewEntropy = 0.0;
 
     return viewEntropy;
 }
